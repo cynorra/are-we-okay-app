@@ -82,4 +82,10 @@ dependencies {
   implementation(libs.androidx.navigation3.ui)
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+
+  // JSON Serialization
+  implementation(libs.kotlinx.serialization.json)
+
+  // Material Icons Core
+  implementation(libs.androidx.compose.material.icons.core)
 }

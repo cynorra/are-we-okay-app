@@ -2,10 +2,15 @@ package com.example.okayness.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val OkBeige = Color(0xFFFAF3EC)
+val OkSurface = Color(0xFFFFFFFF)
+val OkBlack = Color(0xFF402E2A)
+val OkMuted = Color(0xFF8A7A75)
+val OkBorder = Color(0xFFE8DCCB)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val OkOrange = Color(0xFFE07A5F)
+val OkOrangeShade = Color(0xFFC45F45)
+val OkOrangeLight = Color(0xFFFDF1ED)
+
+val OkTeal = Color(0xFF3D5A80)
+val OkTealLight = Color(0xFFE0EBF5)
