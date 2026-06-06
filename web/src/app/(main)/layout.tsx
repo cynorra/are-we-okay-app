@@ -2,8 +2,9 @@
 
 import { Heart, Compass, CheckCircle, Users, Map as MapIcon, BarChart3, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { signOut } from "../../utils/db";
 
 export default function MainLayout({
   children,
@@ -11,6 +12,14 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+    router.refresh();
+  };
+
 
   const navItems = [
     { name: "Check-in", href: "/checkin", icon: CheckCircle },
@@ -62,7 +71,10 @@ export default function MainLayout({
             <Settings className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
             Settings
           </Link>
-          <button className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-red-50/80 text-red-600 transition-colors font-semibold cursor-pointer w-full text-left">
+          <button 
+            onClick={handleSignOut}
+            className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-red-50/80 text-red-600 transition-colors font-semibold cursor-pointer w-full text-left"
+          >
             <LogOut className="w-5 h-5 text-red-400" />
             Sign Out
           </button>

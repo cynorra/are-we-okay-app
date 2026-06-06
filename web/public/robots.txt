@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+Sitemap: https://areweokay.com/sitemap.xml

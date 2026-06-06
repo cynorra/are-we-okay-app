@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDown, X, Heart, Shield, EyeOff, Users, Smile } from "lucide-react";
 import Image from "next/image";
 
+import { joinWaitlist } from "../utils/db";
+
 export default function LandingPage() {
   const [mood, setMood] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -17,12 +19,15 @@ export default function LandingPage() {
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call for now (Phase 0 mock)
-    setTimeout(() => {
+    const success = await joinWaitlist(email, mood || "unsure");
+    if (success) {
       setSubmitted(true);
       setEmail("");
-    }, 1000);
+    } else {
+      alert("Could not join waitlist. Please try again.");
+    }
   };
+
 
   return (
     <div className="min-h-screen bg-[var(--color-ok-beige)] text-[var(--color-ok-black)] selection:bg-[var(--color-ok-orange)] selection:text-white font-sans overflow-x-hidden">

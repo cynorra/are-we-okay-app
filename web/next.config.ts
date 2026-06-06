@@ -1,7 +1,21 @@
-import type { NextConfig } from "next";
+import path from 'path';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    resolveAlias: {
+      '@supabase/phoenix': './node_modules/@supabase/phoenix',
+      'iceberg-js': './node_modules/iceberg-js',
+    },
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@supabase/phoenix': path.resolve(__dirname, 'node_modules/@supabase/phoenix'),
+      'iceberg-js': path.resolve(__dirname, 'node_modules/iceberg-js'),
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
