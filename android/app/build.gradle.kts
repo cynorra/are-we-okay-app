@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.example.okayness"
     compileSdk = 36
-    ndkVersion = "30.0.14904198"
+    // ndkVersion = "30.0.14904198"
     defaultConfig {
         applicationId = "com.example.okayness"
         minSdk = 24
