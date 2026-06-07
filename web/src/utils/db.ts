@@ -270,6 +270,48 @@ export async function signIn(email: string, password: string): Promise<{ user: U
   }
 }
 
+export async function signInWithGoogle(): Promise<{ error: string | null }> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      return { error: error?.message || null };
+    } catch (e: any) {
+      return { error: e.message || 'Failed to initiate Google sign in' };
+    }
+  } else {
+    // Local mode simulation: pick a random google account
+    const email = 'erens.dev@gmail.com';
+    const username = 'erens_dev';
+    const users = getLocal<UserProfile[]>('ok_users', []);
+    let user = users.find(u => u.email === email);
+    if (!user) {
+      user = {
+        id: 'usr-' + Math.random().toString(36).substr(2, 9),
+        email,
+        username,
+        avatar_emoji: '😎',
+        role: 'user',
+        created_at: new Date().toISOString()
+      };
+      users.push(user);
+      setLocal('ok_users', users);
+    }
+    setLocal('ok_session', user);
+    
+    // In local mode, redirect directly to /checkin since there is no server callback
+    if (typeof window !== 'undefined') {
+      window.location.href = '/checkin';
+    }
+    return { error: null };
+  }
+}
+
 export async function signOut(): Promise<void> {
   if (isSupabaseConfigured()) {
     try {

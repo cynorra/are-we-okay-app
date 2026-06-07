@@ -298,9 +298,7 @@ fun AuthScreen(
 ) {
     val dataRepository = LocalDataRepository.current
     var selectedMood by remember { mutableStateOf<String?>(null) }
-    var showModal by remember { mutableStateOf(false) }
     var showGooglePicker by remember { mutableStateOf(false) }
-    var directAuthMode by remember { mutableStateOf<String?>(null) } // "signin" or "signup" or null
 
     val scrollState = rememberScrollState()
 
@@ -390,7 +388,7 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Mood Buttons
+                    // Mood Buttons (directly triggers Google Sign-in on click)
                     val moodButtons = listOf(
                         Triple("good", "😎", "We're Good"),
                         Triple("bad", "😔", "We're Not"),
@@ -401,7 +399,7 @@ fun AuthScreen(
                         Button(
                             onClick = {
                                 selectedMood = moodKey
-                                showModal = true
+                                showGooglePicker = true
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -427,75 +425,15 @@ fun AuthScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // "or" Divider
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Box(modifier = Modifier.weight(1f).height(1.dp).background(OkBorder))
-                        Text(
-                            text = "veya",
-                            color = OkMuted,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        Box(modifier = Modifier.weight(1f).height(1.dp).background(OkBorder))
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Google Login Button
+                    // Google Login Button directly
                     GoogleSignInButton(
-                        onClick = { showGooglePicker = true }
+                        onClick = { 
+                            selectedMood = null
+                            showGooglePicker = true 
+                        }
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Traditional Sign In / Sign Up togglers
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        TextButton(
-                            onClick = {
-                                selectedMood = "unsure"
-                                directAuthMode = "signin"
-                                showModal = true
-                            }
-                        ) {
-                            Text(
-                                text = "E-posta ile Giriş Yap",
-                                color = OkOrangeShade,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "•",
-                            color = OkMuted,
-                            modifier = Modifier.align(Alignment.CenterVertically)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        TextButton(
-                            onClick = {
-                                selectedMood = "unsure"
-                                directAuthMode = "signup"
-                                showModal = true
-                            }
-                        ) {
-                            Text(
-                                text = "Yeni Hesap Oluştur",
-                                color = OkOrangeShade,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
                 }
             }
 
@@ -517,8 +455,8 @@ fun AuthScreen(
                 onAccountSelected = { email, name ->
                     showGooglePicker = false
                     val result = dataRepository.signIn(email)
-                    if (result.isSuccess) {
-                        onAuthSuccess()
+                    val userProfile = if (result.isSuccess) {
+                        result.getOrNull()
                     } else {
                         // User does not exist, automatically sign them up
                         val cleanUsername = email.substringBefore("@").replace(".", "_")
@@ -527,303 +465,29 @@ fun AuthScreen(
                             username = cleanUsername,
                             avatarEmoji = "😎"
                         )
-                        if (signUpResult.isSuccess) {
-                            onAuthSuccess()
-                        }
+                        signUpResult.getOrNull()
                     }
-                }
-            )
-        }
-
-        // Dialog Modal for Register/Login
-        if (showModal && selectedMood != null) {
-            AuthModal(
-                mood = selectedMood!!,
-                initialIsSignUp = directAuthMode != "signin",
-                onDismiss = { 
-                    showModal = false
-                    directAuthMode = null
-                },
-                onAuthSuccess = onAuthSuccess,
-                onGoogleAuthClick = {
-                    showModal = false
-                    directAuthMode = null
-                    showGooglePicker = true
+                    
+                    if (userProfile != null) {
+                        // Automatically create public checkin if mood button was clicked
+                        selectedMood?.let { moodKey ->
+                            val moodState = when (moodKey) {
+                                "good" -> com.example.okayness.data.MoodState.good
+                                "bad" -> com.example.okayness.data.MoodState.bad
+                                else -> com.example.okayness.data.MoodState.unsure
+                            }
+                            dataRepository.createCheckin(
+                                mood = moodState,
+                                note = "",
+                                isPublic = true
+                            )
+                        }
+                        onAuthSuccess()
+                    }
                 }
             )
         }
     }
 }
 
-@Composable
-fun AuthModal(
-    mood: String,
-    initialIsSignUp: Boolean,
-    onDismiss: () -> Unit,
-    onAuthSuccess: () -> Unit,
-    onGoogleAuthClick: () -> Unit
-) {
-    val dataRepository = LocalDataRepository.current
-    var isSignUp by remember { mutableStateOf(initialIsSignUp) }
-
-    var email by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var selectedEmoji by remember { mutableStateOf("🌙") }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
-
-    val emojis = listOf("🌙", "😎", "😔", "🤔", "💻", "🎓", "⛵", "🌱", "🍕", "🐱", "🐶", "🦊")
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = OkSurface),
-            shape = RoundedCornerShape(28.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, OkBorder)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header emoji based on mood
-                val (modalEmoji, title, desc) = when (mood) {
-                    "good" -> Triple("😎", "Wonderful 😊", "So glad you're doing well. 🫂")
-                    "bad" -> Triple("😔", "We hear you 💙", "Hard times don't last. 🫂")
-                    else -> Triple("🤔", "That's okay too 🤗", "Not knowing is also an answer. 🫂")
-                }
-
-                Text(text = modalEmoji, fontSize = 48.sp)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = title,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OkBlack,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = desc,
-                    fontSize = 14.sp,
-                    color = OkMuted,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Box(
-                    modifier = Modifier
-                        .background(OkOrangeLight, RoundedCornerShape(16.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Join 2,451 people checked in today",
-                        color = OkOrangeShade,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Quick Google login option inside modal
-                GoogleSignInButton(onClick = onGoogleAuthClick)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // "or" Divider
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Box(modifier = Modifier.weight(1f).height(1.dp).background(OkBorder))
-                    Text(
-                        text = "veya e-posta",
-                        color = OkMuted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-                    Box(modifier = Modifier.weight(1f).height(1.dp).background(OkBorder))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (errorMsg != null) {
-                    Text(
-                        text = errorMsg!!,
-                        color = Color.Red,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                // Email
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it; errorMsg = null },
-                    label = { Text("E-posta veya Kullanıcı Adı") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = OkOrange,
-                        unfocusedBorderColor = OkBorder,
-                        focusedLabelColor = OkOrange,
-                        unfocusedLabelColor = OkMuted
-                    )
-                )
-
-                if (isSignUp) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Username
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it; errorMsg = null },
-                        label = { Text("Görünecek Kullanıcı Adı") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = OkOrange,
-                            unfocusedBorderColor = OkBorder,
-                            focusedLabelColor = OkOrange,
-                            unfocusedLabelColor = OkMuted
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Avatar emoji picker
-                    Text(
-                        text = "Profil Emojinizi Seçin:",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = OkBlack,
-                        modifier = Modifier.align(Alignment.Start)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            emojis.take(6).forEach { emoji ->
-                                val isSelected = selectedEmoji == emoji
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) OkOrangeLight else Color.Transparent)
-                                        .border(
-                                            1.dp,
-                                            if (isSelected) OkOrange else OkBorder,
-                                            RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable { selectedEmoji = emoji }
-                                        .padding(4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(text = emoji, fontSize = 18.sp)
-                                }
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            emojis.drop(6).take(6).forEach { emoji ->
-                                val isSelected = selectedEmoji == emoji
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) OkOrangeLight else Color.Transparent)
-                                        .border(
-                                            1.dp,
-                                            if (isSelected) OkOrange else OkBorder,
-                                            RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable { selectedEmoji = emoji }
-                                        .padding(4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(text = emoji, fontSize = 18.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Submit Button
-                Button(
-                    onClick = {
-                        if (email.isEmpty()) {
-                            errorMsg = "Lütfen e-posta veya kullanıcı adınızı girin."
-                            return@Button
-                        }
-                        if (isSignUp && username.isEmpty()) {
-                            errorMsg = "Lütfen görünecek bir kullanıcı adı girin."
-                            return@Button
-                        }
-
-                        if (isSignUp) {
-                            val result = dataRepository.signUp(email, username, selectedEmoji)
-                            if (result.isSuccess) {
-                                onAuthSuccess()
-                                onDismiss()
-                            } else {
-                                errorMsg = result.exceptionOrNull()?.message ?: "Kayıt başarısız."
-                            }
-                        } else {
-                            val result = dataRepository.signIn(email)
-                            if (result.isSuccess) {
-                                onAuthSuccess()
-                                onDismiss()
-                            } else {
-                                errorMsg = result.exceptionOrNull()?.message ?: "Giriş başarısız."
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(
-                        text = if (isSignUp) "Hesap Oluştur ve Giriş Yap" else "Giriş Yap",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Toggle Mode Button
-                TextButton(
-                    onClick = {
-                        isSignUp = !isSignUp
-                        errorMsg = null
-                    }
-                ) {
-                    Text(
-                        text = if (isSignUp) "Zaten bir hesabınız var mı? Giriş Yapın" else "Yeni misiniz? Kayıt Olun",
-                        color = OkOrangeShade,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
 
