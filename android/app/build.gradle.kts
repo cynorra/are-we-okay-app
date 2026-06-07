@@ -88,4 +88,7 @@ dependencies {
 
   // Material Icons Core
   implementation(libs.androidx.compose.material.icons.core)
+
+  // OkHttp
+  implementation(libs.okhttp)
 }

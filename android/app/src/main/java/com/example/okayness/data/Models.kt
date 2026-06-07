@@ -108,3 +108,14 @@ data class FriendRequestItem(
     val id: String,
     val user: UserProfile
 )
+
+@Serializable
+data class FriendshipWithRequester(
+    val id: String,
+    val requester: UserProfile
+)
+
+@Serializable
+data class CountResponse(
+    val count: Int
+)
