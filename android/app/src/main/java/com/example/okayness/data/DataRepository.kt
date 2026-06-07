@@ -15,6 +15,11 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 val LocalDataRepository = staticCompositionLocalOf<DataRepository> {
     error("No DataRepository provided")
@@ -22,6 +27,7 @@ val LocalDataRepository = staticCompositionLocalOf<DataRepository> {
 
 interface DataRepository {
     val currentUser: StateFlow<UserProfile?>
+    val feedPosts: StateFlow<List<Post>>
     fun getCurrentUserSync(): UserProfile?
     fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile>
     fun signIn(email: String): Result<UserProfile>
@@ -51,6 +57,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
     private val _currentUser = MutableStateFlow<UserProfile?>(null)
     override val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
 
+    private val _feedPosts = MutableStateFlow<List<Post>>(emptyList())
+    override val feedPosts: StateFlow<List<Post>> = _feedPosts.asStateFlow()
+
     init {
         // Load initial session if exists
         val sessionStr = prefs.getString("ok_session", null)
@@ -64,6 +73,12 @@ class DefaultDataRepository(context: Context) : DataRepository {
 
         // Seed data if empty
         seedDataIfEmpty()
+
+        // Load initial feed posts flow
+        _feedPosts.value = getFeedPosts()
+
+        // Start background mock cron simulation
+        startMockCronSimulation()
     }
 
     private fun getIsoString(date: Date = Date()): String {
@@ -90,40 +105,96 @@ class DefaultDataRepository(context: Context) : DataRepository {
     }
 
     private fun seedDataIfEmpty() {
-        val usersStr = prefs.getString("ok_users", null)
-        if (usersStr.isNullOrEmpty()) {
+        val postsStr = prefs.getString("ok_posts", null)
+        val existingPosts = try {
+            postsStr?.let { json.decodeFromString<List<Post>>(it) }
+        } catch (e: Exception) {
+            null
+        }
+
+        // Re-seed if no posts or if it is the old sparse default seed (<= 3 posts)
+        if (postsStr.isNullOrEmpty() || existingPosts == null || existingPosts.size <= 3) {
             val initialUsers = listOf(
                 UserProfile(id = "usr-1", username = "stressed_coder", avatar_emoji = "💻", role = "user", created_at = getIsoString()),
                 UserProfile(id = "usr-2", username = "exam_winner", avatar_emoji = "🎓", role = "user", created_at = getIsoString()),
-                UserProfile(id = "usr-3", username = "wanderer", avatar_emoji = "⛵", role = "user", created_at = getIsoString())
+                UserProfile(id = "usr-3", username = "wanderer", avatar_emoji = "⛵", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-4", username = "coffee_lover", avatar_emoji = "☕", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-5", username = "yoga_guru", avatar_emoji = "🧘", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-6", username = "night_owl", avatar_emoji = "🦉", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-7", username = "music_chef", avatar_emoji = "🎵", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-8", username = "art_dreamer", avatar_emoji = "🎨", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-9", username = "nature_walks", avatar_emoji = "🌱", role = "user", created_at = getIsoString()),
+                UserProfile(id = "usr-10", username = "bookworm", avatar_emoji = "📚", role = "user", created_at = getIsoString())
             )
             prefs.edit().putString("ok_users", json.encodeToString(initialUsers)).apply()
-        }
 
-        val postsStr = prefs.getString("ok_posts", null)
-        if (postsStr.isNullOrEmpty()) {
             val nowMs = System.currentTimeMillis()
             val initialPosts = listOf(
+                Post(
+                    id = "post-11",
+                    user_id = "usr-1",
+                    username = "stressed_coder",
+                    avatar_emoji = "💻",
+                    content = "Yine sabahladık... Kod çalışıyor ama ben çalışmıyorum galiba. Kafam durdu.",
+                    mood = MoodState.bad,
+                    is_anonymous = true,
+                    created_at = getIsoString(Date(nowMs - 10 * 60 * 1000)), // 10 mins ago
+                    reactions = ReactionCounts(hug = 42, feel_this = 28, strength = 12, you_got_this = 5),
+                    userReactions = emptyList(),
+                    comments = listOf(
+                        Comment(
+                            id = "c-11-1",
+                            post_id = "post-11",
+                            user_id = "usr-4",
+                            username = "coffee_lover",
+                            avatar_emoji = "☕",
+                            content = "Kapat bilgisayarı, biraz uyu lütfen! Sağlık koddan daha önemli. ☕💤",
+                            created_at = getIsoString(Date(nowMs - 5 * 60 * 1000))
+                        )
+                    )
+                ),
+                Post(
+                    id = "post-5",
+                    user_id = "usr-4",
+                    username = "coffee_lover",
+                    avatar_emoji = "☕",
+                    content = "A warm cup of coffee and a quiet morning. Today is going to be a good day. Deep breaths.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 30 * 60 * 1000)), // 30 mins ago
+                    reactions = ReactionCounts(hug = 38, feel_this = 14, strength = 10, you_got_this = 18),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
                 Post(
                     id = "post-1",
                     user_id = "usr-1",
                     username = "stressed_coder",
                     avatar_emoji = "💻",
-                    content = "Just feeling really overwhelmed with work lately. Doesn't seem to end.",
+                    content = "Bugün production deploy'u yaparken her şey patladı. Gerçekten çok yorucu bir gündü ama ekibin desteğiyle toparladık.",
                     mood = MoodState.bad,
-                    is_anonymous = true,
-                    created_at = getIsoString(Date(nowMs - 2 * 60 * 60 * 1000)),
-                    reactions = ReactionCounts(hug = 12, feel_this = 8, strength = 3, you_got_this = 1),
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 2 * 60 * 60 * 1000)), // 2h ago
+                    reactions = ReactionCounts(hug = 24, feel_this = 12, strength = 10, you_got_this = 5),
                     userReactions = emptyList(),
                     comments = listOf(
                         Comment(
-                            id = "c-1",
+                            id = "c-1-1",
                             post_id = "post-1",
-                            user_id = "usr-2",
-                            username = "exam_winner",
-                            avatar_emoji = "🎓",
-                            content = "Hang in there, take short breaks! 🫂",
+                            user_id = "usr-5",
+                            username = "yoga_guru",
+                            avatar_emoji = "🧘",
+                            content = "Nefes almayı unutma, her şey geçici. Yarın yepyeni bir gün! 🧘",
                             created_at = getIsoString(Date(nowMs - 90 * 60 * 1000))
+                        ),
+                        Comment(
+                            id = "c-1-2",
+                            post_id = "post-1",
+                            user_id = "usr-4",
+                            username = "coffee_lover",
+                            avatar_emoji = "☕",
+                            content = "Geçmiş olsun dostum, elinize sağlık! Fincanlar benden. ☕",
+                            created_at = getIsoString(Date(nowMs - 60 * 60 * 1000))
                         )
                     )
                 ),
@@ -132,13 +203,23 @@ class DefaultDataRepository(context: Context) : DataRepository {
                     user_id = "usr-2",
                     username = "exam_winner",
                     avatar_emoji = "🎓",
-                    content = "I passed my final exam! So relieved.",
+                    content = "I passed my final exam! So relieved. All those sleepless nights paid off.",
                     mood = MoodState.good,
                     is_anonymous = false,
-                    created_at = getIsoString(Date(nowMs - 4 * 60 * 60 * 1000)),
-                    reactions = ReactionCounts(hug = 85, feel_this = 5, strength = 42, you_got_this = 10),
+                    created_at = getIsoString(Date(nowMs - 4 * 60 * 60 * 1000)), // 4h ago
+                    reactions = ReactionCounts(hug = 85, feel_this = 5, strength = 42, you_got_this = 30),
                     userReactions = emptyList(),
-                    comments = emptyList()
+                    comments = listOf(
+                        Comment(
+                            id = "c-2-1",
+                            post_id = "post-2",
+                            user_id = "usr-10",
+                            username = "bookworm",
+                            avatar_emoji = "📚",
+                            content = "Congratulations! You earned this! 🎉",
+                            created_at = getIsoString(Date(nowMs - 3 * 60 * 60 * 1000))
+                        )
+                    )
                 ),
                 Post(
                     id = "post-3",
@@ -148,8 +229,129 @@ class DefaultDataRepository(context: Context) : DataRepository {
                     content = "Not sure where I'm going in life right now, but taking it one day at a time.",
                     mood = MoodState.unsure,
                     is_anonymous = true,
-                    created_at = getIsoString(Date(nowMs - 5 * 60 * 60 * 1000)),
-                    reactions = ReactionCounts(hug = 45, feel_this = 32, strength = 8, you_got_this = 4),
+                    created_at = getIsoString(Date(nowMs - 8 * 60 * 60 * 1000)), // 8h ago
+                    reactions = ReactionCounts(hug = 45, feel_this = 32, strength = 8, you_got_this = 12),
+                    userReactions = emptyList(),
+                    comments = listOf(
+                        Comment(
+                            id = "c-3-1",
+                            post_id = "post-3",
+                            user_id = "usr-8",
+                            username = "art_dreamer",
+                            avatar_emoji = "🎨",
+                            content = "The journey is the destination. Enjoy the scenery. 🎨 Let it flow.",
+                            created_at = getIsoString(Date(nowMs - 6 * 60 * 60 * 1000))
+                        )
+                    )
+                ),
+                Post(
+                    id = "post-4",
+                    user_id = "usr-6",
+                    username = "night_owl",
+                    avatar_emoji = "🦉",
+                    content = "Gece yarısı gelen o anlamsız yalnızlık hissi... Bazen sadece birilerinin sesini duymak istiyor insan.",
+                    mood = MoodState.bad,
+                    is_anonymous = true,
+                    created_at = getIsoString(Date(nowMs - 12 * 60 * 60 * 1000)), // 12h ago
+                    reactions = ReactionCounts(hug = 56, feel_this = 48, strength = 10, you_got_this = 3),
+                    userReactions = emptyList(),
+                    comments = listOf(
+                        Comment(
+                            id = "c-4-1",
+                            post_id = "post-4",
+                            user_id = "usr-9",
+                            username = "nature_walks",
+                            avatar_emoji = "🌱",
+                            content = "Yalnız değilsin dostum, hepimiz benzer yollardan geçiyoruz. Buradayız. 🫂",
+                            created_at = getIsoString(Date(nowMs - 11 * 60 * 60 * 1000))
+                        )
+                    )
+                ),
+                Post(
+                    id = "post-10",
+                    user_id = "usr-5",
+                    username = "yoga_guru",
+                    avatar_emoji = "🧘",
+                    content = "Sometimes the best thing you can do is just let go of what you cannot control. Trust the process.",
+                    mood = MoodState.unsure,
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 18 * 60 * 60 * 1000)), // 18h ago
+                    reactions = ReactionCounts(hug = 75, feel_this = 42, strength = 38, you_got_this = 25),
+                    userReactions = emptyList(),
+                    comments = listOf(
+                        Comment(
+                            id = "c-10-1",
+                            post_id = "post-10",
+                            user_id = "usr-3",
+                            username = "wanderer",
+                            avatar_emoji = "⛵",
+                            content = "Needed to hear this so badly today. Thank you. 🙏",
+                            created_at = getIsoString(Date(nowMs - 16 * 60 * 60 * 1000))
+                        )
+                    )
+                ),
+                Post(
+                    id = "post-9",
+                    user_id = "usr-9",
+                    username = "nature_walks",
+                    avatar_emoji = "🌱",
+                    content = "Bugün ormanda uzun bir yürüyüş yaptım. Doğa insana cidden şifa veriyor. Zihnimdeki tüm gürültü yok oldu.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 24 * 60 * 60 * 1000)), // 24h ago
+                    reactions = ReactionCounts(hug = 40, feel_this = 10, strength = 8, you_got_this = 15),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "post-8",
+                    user_id = "usr-8",
+                    username = "art_dreamer",
+                    avatar_emoji = "🎨",
+                    content = "Sadece oturup gökyüzünün renklerini izledim bugün. Bazen hiçbir şey yapmamak en iyisi.",
+                    mood = MoodState.good,
+                    is_anonymous = true,
+                    created_at = getIsoString(Date(nowMs - 28 * 60 * 60 * 1000)), // 28h ago
+                    reactions = ReactionCounts(hug = 62, feel_this = 22, strength = 15, you_got_this = 11),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "post-6",
+                    user_id = "usr-10",
+                    username = "bookworm",
+                    avatar_emoji = "📚",
+                    content = "Yeni bir kitaba başladım ve zamanın nasıl geçtiğini unuttum. Kendime vakit ayırmak çok iyi geldi.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 48 * 60 * 60 * 1000)), // 48h ago
+                    reactions = ReactionCounts(hug = 29, feel_this = 5, strength = 3, you_got_this = 10),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "post-7",
+                    user_id = "usr-7",
+                    username = "music_chef",
+                    avatar_emoji = "🎵",
+                    content = "Tried cooking a new recipe today and it burned a bit, but honestly, it was fun experimenting.",
+                    mood = MoodState.unsure,
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 52 * 60 * 60 * 1000)), // 52h ago
+                    reactions = ReactionCounts(hug = 18, feel_this = 15, strength = 4, you_got_this = 20),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "post-12",
+                    user_id = "usr-6",
+                    username = "night_owl",
+                    avatar_emoji = "🦉",
+                    content = "Listening to the rain outside and reading a classic. Peace is in the small moments.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = getIsoString(Date(nowMs - 72 * 60 * 60 * 1000)), // 72h ago
+                    reactions = ReactionCounts(hug = 34, feel_this = 12, strength = 5, you_got_this = 7),
                     userReactions = emptyList(),
                     comments = emptyList()
                 )
@@ -174,6 +376,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
 
     private fun savePostsList(list: List<Post>) {
         prefs.edit().putString("ok_posts", json.encodeToString(list)).apply()
+        _feedPosts.value = getFeedPosts()
     }
 
     private fun getCheckinsList(): List<Checkin> {
@@ -582,5 +785,140 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
 
         return result
+    }
+
+    private fun startMockCronSimulation() {
+        val repositoryScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        repositoryScope.launch {
+            // Wait 45 seconds before the first dynamic update
+            delay(45000)
+            
+            val dynamicPosts = listOf(
+                Post(
+                    id = "dyn-post-1",
+                    user_id = "usr-1",
+                    username = "stressed_coder",
+                    avatar_emoji = "💻",
+                    content = "Hata çözüldü! Sonunda her şey stabil çalışıyor, eve gidip uyuma vakti. 😴",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 15, feel_this = 8, strength = 20, you_got_this = 12),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-2",
+                    user_id = "usr-4",
+                    username = "coffee_lover",
+                    avatar_emoji = "☕",
+                    content = "Just ordered a double espresso. Time to tackle the rest of the day! ☕ Let's do this.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 8, feel_this = 3, strength = 14, you_got_this = 10),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-3",
+                    user_id = "usr-5",
+                    username = "yoga_guru",
+                    avatar_emoji = "🧘",
+                    content = "Take a moment to relax your shoulders, un-clench your jaw, and take a deep breath. 🌿 You are doing fine.",
+                    mood = MoodState.unsure,
+                    is_anonymous = false,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 55, feel_this = 22, strength = 18, you_got_this = 15),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-4",
+                    user_id = "usr-3",
+                    username = "wanderer",
+                    avatar_emoji = "⛵",
+                    content = "Gökyüzü bu akşam çok güzel... Umut doluyum nedense. Her şey düzelecek.",
+                    mood = MoodState.good,
+                    is_anonymous = true,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 32, feel_this = 40, strength = 5, you_got_this = 8),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-5",
+                    user_id = "usr-6",
+                    username = "night_owl",
+                    avatar_emoji = "🦉",
+                    content = "Can't sleep. Listening to some ambient lo-fi music. Anyone else up?",
+                    mood = MoodState.unsure,
+                    is_anonymous = true,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 24, feel_this = 18, strength = 3, you_got_this = 2),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-6",
+                    user_id = "usr-2",
+                    username = "exam_winner",
+                    avatar_emoji = "🎓",
+                    content = "Notlarım açıklandı, hepsi beklediğimden de iyi gelmiş! 😭🎉 Sonunda rahatça uyuyabilirim.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 65, feel_this = 4, strength = 32, you_got_this = 20),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-7",
+                    user_id = "usr-8",
+                    username = "art_dreamer",
+                    avatar_emoji = "🎨",
+                    content = "Finished my painting today. Art heals in ways words cannot express. 🎨✨",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 22, feel_this = 14, strength = 12, you_got_this = 8),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                ),
+                Post(
+                    id = "dyn-post-8",
+                    user_id = "usr-9",
+                    username = "nature_walks",
+                    avatar_emoji = "🌱",
+                    content = "Dışarıda hafif bir yağmur var, toprak kokusu harika. Doğayla iç içe olmak iyi hissettiriyor.",
+                    mood = MoodState.good,
+                    is_anonymous = false,
+                    created_at = "",
+                    reactions = ReactionCounts(hug = 28, feel_this = 6, strength = 5, you_got_this = 11),
+                    userReactions = emptyList(),
+                    comments = emptyList()
+                )
+            )
+            
+            var postIndex = 0
+            while (postIndex < dynamicPosts.size) {
+                // Post a new mock update every 60 seconds
+                delay(60000)
+                
+                val basePost = dynamicPosts[postIndex]
+                val posts = getPostsList().toMutableList()
+                
+                if (!posts.any { it.content == basePost.content }) {
+                    val newPost = basePost.copy(
+                        id = "post-dyn-" + UUID.randomUUID().toString().substring(0, 8),
+                        created_at = getIsoString()
+                    )
+                    posts.add(0, newPost)
+                    savePostsList(posts)
+                }
+                
+                postIndex++
+            }
+        }
     }
 }

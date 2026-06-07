@@ -363,13 +363,7 @@ fun CheckinTab() {
 @Composable
 fun FeedTab() {
     val dataRepository = LocalDataRepository.current
-    var posts by remember { mutableStateOf(emptyList<Post>()) }
-
-    // Fetch posts once
-    remember {
-        posts = dataRepository.getFeedPosts()
-        Unit
-    }
+    val posts by dataRepository.feedPosts.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -421,23 +415,15 @@ fun FeedTab() {
                         post = post,
                         onReactionClick = { reaction ->
                             val active = post.userReactions.contains(reaction)
-                            val success = if (active) {
+                            if (active) {
                                 dataRepository.removeReaction(post.id, reaction)
                             } else {
                                 dataRepository.addReaction(post.id, reaction)
                             }
-                            if (success) {
-                                posts = dataRepository.getFeedPosts()
-                            }
                         },
                         onAddComment = { content ->
                             val comment = dataRepository.addComment(post.id, content)
-                            if (comment != null) {
-                                posts = dataRepository.getFeedPosts()
-                                true
-                            } else {
-                                false
-                            }
+                            comment != null
                         }
                     )
                 }
