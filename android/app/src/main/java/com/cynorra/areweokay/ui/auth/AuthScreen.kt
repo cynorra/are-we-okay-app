@@ -1,4 +1,4 @@
-package com.example.okayness.ui.auth
+package com.cynorra.areweokay.ui.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,16 +58,16 @@ import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
-import com.example.okayness.R
-import com.example.okayness.data.LocalDataRepository
-import com.example.okayness.theme.OkBeige
-import com.example.okayness.theme.OkBlack
-import com.example.okayness.theme.OkBorder
-import com.example.okayness.theme.OkMuted
-import com.example.okayness.theme.OkOrange
-import com.example.okayness.theme.OkOrangeLight
-import com.example.okayness.theme.OkOrangeShade
-import com.example.okayness.theme.OkSurface
+import com.cynorra.areweokay.R
+import com.cynorra.areweokay.data.LocalDataRepository
+import com.cynorra.areweokay.theme.OkBeige
+import com.cynorra.areweokay.theme.OkBlack
+import com.cynorra.areweokay.theme.OkBorder
+import com.cynorra.areweokay.theme.OkMuted
+import com.cynorra.areweokay.theme.OkOrange
+import com.cynorra.areweokay.theme.OkOrangeLight
+import com.cynorra.areweokay.theme.OkOrangeShade
+import com.cynorra.areweokay.theme.OkSurface
 import java.util.UUID
 
 @Composable
@@ -164,6 +165,10 @@ fun AuthScreen(
     
     var selectedMood by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    var showEmailLogin by remember { mutableStateOf(false) }
+    var emailInput by remember { mutableStateOf("") }
+    var passwordInput by remember { mutableStateOf("") }
 
     val scrollState = rememberScrollState()
 
@@ -215,9 +220,9 @@ fun AuthScreen(
                         // Automatically create public checkin if mood button was clicked
                         selectedMood?.let { moodKey ->
                             val moodState = when (moodKey) {
-                                "good" -> com.example.okayness.data.MoodState.good
-                                "bad" -> com.example.okayness.data.MoodState.bad
-                                else -> com.example.okayness.data.MoodState.unsure
+                                "good" -> com.cynorra.areweokay.data.MoodState.good
+                                "bad" -> com.cynorra.areweokay.data.MoodState.bad
+                                else -> com.cynorra.areweokay.data.MoodState.unsure
                             }
                             dataRepository.createCheckin(
                                 mood = moodState,
@@ -267,13 +272,13 @@ fun AuthScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.Favorite,
-                contentDescription = "Okayness",
+                contentDescription = "Are We Okay",
                 tint = OkOrange,
                 modifier = Modifier.size(26.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Okayness",
+                text = "Are We Okay",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = OkBlack
@@ -320,60 +325,158 @@ fun AuthScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "How is your day going?",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = OkBlack
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (!showEmailLogin) {
+                        Text(
+                            text = "How is your day going?",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OkBlack
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Mood Buttons (directly triggers Google Sign-in on click)
-                    val moodButtons = listOf(
-                        Triple("good", "😎", "We're Good"),
-                        Triple("bad", "😔", "We're Not"),
-                        Triple("unsure", "🤔", "Not Sure")
-                    )
+                        // Mood Buttons (directly triggers Google Sign-in on click)
+                        val moodButtons = listOf(
+                            Triple("good", "😎", "We're Good"),
+                            Triple("bad", "😔", "We're Not"),
+                            Triple("unsure", "🤔", "Not Sure")
+                        )
 
-                    moodButtons.forEach { (moodKey, emoji, label) ->
+                        moodButtons.forEach { (moodKey, emoji, label) ->
+                            Button(
+                                onClick = {
+                                    selectedMood = moodKey
+                                    triggerGoogleSignIn()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = OkBeige.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(28.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, OkBorder)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(text = emoji, fontSize = 22.sp)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = label,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = OkBlack
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Google Login Button directly
+                        GoogleSignInButton(
+                            onClick = { 
+                                selectedMood = null
+                                triggerGoogleSignIn()
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        TextButton(
+                            onClick = { showEmailLogin = true }
+                        ) {
+                            Text(
+                                text = "E-posta ile Giriş Yap",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OkOrange
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "E-posta ile Giriş",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OkBlack
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = { emailInput = it },
+                            label = { Text("E-posta Adresi") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OkOrange,
+                                unfocusedBorderColor = OkBorder,
+                                focusedLabelColor = OkOrange
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = { passwordInput = it },
+                            label = { Text("Şifre") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = OkOrange,
+                                unfocusedBorderColor = OkBorder,
+                                focusedLabelColor = OkOrange
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
                         Button(
                             onClick = {
-                                selectedMood = moodKey
-                                triggerGoogleSignIn()
+                                if (emailInput.isNotBlank() && passwordInput.isNotBlank()) {
+                                    coroutineScope.launch {
+                                        val res = dataRepository.signInWithPassword(emailInput.trim(), passwordInput)
+                                        if (res.isSuccess) {
+                                            onAuthSuccess()
+                                        } else {
+                                            errorMessage = res.exceptionOrNull()?.localizedMessage ?: "Giriş başarısız oldu."
+                                        }
+                                    }
+                                } else {
+                                    errorMessage = "Lütfen e-posta ve şifrenizi girin."
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(vertical = 4.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = OkBeige.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(28.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, OkBorder)
+                                .height(54.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = OkOrange),
+                            shape = RoundedCornerShape(27.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(text = emoji, fontSize = 22.sp)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = label,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = OkBlack
-                                )
-                            }
+                            Text(
+                                text = "Giriş Yap",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        TextButton(
+                            onClick = { showEmailLogin = false }
+                        ) {
+                            Text(
+                                text = "Geri Dön",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OkMuted
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Google Login Button directly
-                    GoogleSignInButton(
-                        onClick = { 
-                            selectedMood = null
-                            triggerGoogleSignIn()
-                        }
-                    )
                 }
             }
 

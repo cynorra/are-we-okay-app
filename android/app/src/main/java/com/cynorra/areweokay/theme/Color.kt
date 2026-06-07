@@ -1,4 +1,4 @@
-package com.example.okayness.theme
+package com.cynorra.areweokay.theme
 
 import androidx.compose.ui.graphics.Color
 

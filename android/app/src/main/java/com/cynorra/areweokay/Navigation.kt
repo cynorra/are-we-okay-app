@@ -1,4 +1,4 @@
-package com.example.okayness
+package com.cynorra.areweokay
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -6,9 +6,9 @@ import androidx.compose.runtime.getValue
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.example.okayness.data.LocalDataRepository
-import com.example.okayness.ui.auth.AuthScreen
-import com.example.okayness.ui.home.HomeScreen
+import com.cynorra.areweokay.data.LocalDataRepository
+import com.cynorra.areweokay.ui.auth.AuthScreen
+import com.cynorra.areweokay.ui.home.HomeScreen
 
 @Composable
 fun MainNavigation() {

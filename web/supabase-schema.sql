@@ -1,11 +1,27 @@
 -- Okayness Supabase Schema
 -- Run this in your Supabase SQL editor to bootstrap the database.
 
--- 1. Create Custom Types
-CREATE TYPE mood_state AS ENUM ('good', 'bad', 'unsure');
-CREATE TYPE user_role AS ENUM ('user', 'consultant', 'moderator', 'admin');
-CREATE TYPE reaction_type AS ENUM ('hug', 'feel_this', 'strength', 'you_got_this');
-CREATE TYPE moderation_status AS ENUM ('pending', 'approved', 'rejected', 'flagged');
+-- WARNING: This will reset the tables for the Okayness app.
+DROP TABLE IF EXISTS posts, reactions, checkins, friendships, waitlist, users CASCADE;
+
+
+-- 1. Create Custom Types (safely check if they exist first)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'mood_state') THEN
+        CREATE TYPE mood_state AS ENUM ('good', 'bad', 'unsure');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('user', 'consultant', 'moderator', 'admin');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reaction_type') THEN
+        CREATE TYPE reaction_type AS ENUM ('hug', 'feel_this', 'strength', 'you_got_this');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'moderation_status') THEN
+        CREATE TYPE moderation_status AS ENUM ('pending', 'approved', 'rejected', 'flagged');
+    END IF;
+END$$;
+
 
 -- 2. Users Table
 CREATE TABLE users (

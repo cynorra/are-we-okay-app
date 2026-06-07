@@ -1,4 +1,4 @@
-package com.example.okayness.data
+package com.cynorra.areweokay.data
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -36,6 +36,7 @@ interface DataRepository {
     fun getCurrentUserSync(): UserProfile?
     fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile>
     fun signIn(email: String): Result<UserProfile>
+    fun signInWithPassword(email: String, password: String): Result<UserProfile>
     fun signOut()
     fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile>
     
@@ -56,7 +57,7 @@ interface DataRepository {
 }
 
 class DefaultDataRepository(context: Context) : DataRepository {
-    private val prefs: SharedPreferences = context.getSharedPreferences("OkaynessPrefs", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences("AreWeOkayPrefs", Context.MODE_PRIVATE)
     private val json = SupabaseApi.json
 
     private val _currentUser = MutableStateFlow<UserProfile?>(null)
@@ -244,6 +245,29 @@ class DefaultDataRepository(context: Context) : DataRepository {
                 fetchFriendships(user.id)
                 refreshFeed()
 
+                Result.success(user)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    override fun signInWithPassword(email: String, password: String): Result<UserProfile> {
+        return runBlocking {
+            try {
+                SupabaseApi.signInWithPassword(email, password)
+                val query = "email=eq.$email"
+                val rawJson = SupabaseApi.get("/users?$query")
+                val users = json.decodeFromString<List<UserProfile>>(rawJson)
+                if (users.isEmpty()) {
+                    return@runBlocking Result.failure(Exception("User profile not found."))
+                }
+                val user = users.first()
+                prefs.edit().putString("ok_session", json.encodeToString(user)).apply()
+                _currentUser.value = user
+                fetchUserCheckins(user.id)
+                fetchFriendships(user.id)
+                refreshFeed()
                 Result.success(user)
             } catch (e: Exception) {
                 Result.failure(e)

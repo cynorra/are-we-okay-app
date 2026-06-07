@@ -1,4 +1,4 @@
-package com.example.okayness
+package com.cynorra.areweokay
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable

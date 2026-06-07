@@ -1,4 +1,4 @@
-package com.example.okayness.ui.home
+package com.cynorra.areweokay.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,22 +63,22 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.okayness.data.Checkin
-import com.example.okayness.data.Comment
-import com.example.okayness.data.LocalDataRepository
-import com.example.okayness.data.MoodState
-import com.example.okayness.data.Post
-import com.example.okayness.data.UserProfile
-import com.example.okayness.theme.OkBeige
-import com.example.okayness.theme.OkBlack
-import com.example.okayness.theme.OkBorder
-import com.example.okayness.theme.OkMuted
-import com.example.okayness.theme.OkOrange
-import com.example.okayness.theme.OkOrangeLight
-import com.example.okayness.theme.OkOrangeShade
-import com.example.okayness.theme.OkSurface
-import com.example.okayness.theme.OkTeal
-import com.example.okayness.theme.OkTealLight
+import com.cynorra.areweokay.data.Checkin
+import com.cynorra.areweokay.data.Comment
+import com.cynorra.areweokay.data.LocalDataRepository
+import com.cynorra.areweokay.data.MoodState
+import com.cynorra.areweokay.data.Post
+import com.cynorra.areweokay.data.UserProfile
+import com.cynorra.areweokay.theme.OkBeige
+import com.cynorra.areweokay.theme.OkBlack
+import com.cynorra.areweokay.theme.OkBorder
+import com.cynorra.areweokay.theme.OkMuted
+import com.cynorra.areweokay.theme.OkOrange
+import com.cynorra.areweokay.theme.OkOrangeLight
+import com.cynorra.areweokay.theme.OkOrangeShade
+import com.cynorra.areweokay.theme.OkSurface
+import com.cynorra.areweokay.theme.OkTeal
+import com.cynorra.areweokay.theme.OkTealLight
 
 @Composable
 fun HomeScreen(

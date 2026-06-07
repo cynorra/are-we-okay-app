@@ -35,7 +35,7 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--color-ok-black)] text-[var(--color-ok-off-white)] py-4 px-6 md:px-12 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
           <Heart className="w-6 h-6 text-[var(--color-ok-orange)]" />
-          <span className="font-bold text-xl tracking-tight">Okayness</span>
+          <span className="font-bold text-xl tracking-tight">Are We Okay</span>
         </div>
         <button
           onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
@@ -194,7 +194,7 @@ export default function LandingPage() {
           <div>
             <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight text-[var(--color-ok-black)]">A place where honesty heals.</h2>
             <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-              We live in a world where everyone pretends to be okay. Okayness is a sanctuary for the truth. It's a daily check-in to pause, reflect, and connect with a global community that truly understands.
+              We live in a world where everyone pretends to be okay. Are We Okay is a sanctuary for the truth. It's a daily check-in to pause, reflect, and connect with a global community that truly understands.
             </p>
             <div className="space-y-4">
               <div className="flex items-center gap-4 text-xl">
@@ -359,9 +359,9 @@ export default function LandingPage() {
           <div className="border-t border-white/10 pt-12 flex flex-col md:flex-row items-center justify-between gap-6 text-white/50 text-sm">
             <div className="flex items-center gap-2">
               <Heart className="w-5 h-5 text-[var(--color-ok-orange)]" />
-              <span className="font-bold text-white text-xl tracking-tight">Okayness</span>
+              <span className="font-bold text-white text-xl tracking-tight">Are We Okay</span>
             </div>
-            <p>&copy; {new Date().getFullYear()} Okayness. Made with ❤️ around the world.</p>
+            <p>&copy; {new Date().getFullYear()} Are We Okay. Made with ❤️ around the world.</p>
             <div className="flex gap-6">
               <a href="/kvkk" className="hover:text-white transition-colors">KVKK</a>
               <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>

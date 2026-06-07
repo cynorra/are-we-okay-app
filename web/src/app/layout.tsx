@@ -9,21 +9,24 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Okayness | A global wellbeing movement",
+  title: "Are We Okay | A global wellbeing movement",
   description: "A daily anonymous emotional check-in community where people share how they feel, receive peer support, and support others — with zero judgment.",
-  keywords: ["wellbeing", "mental health", "anonymous community", "emotional check-in", "okayness", "peer support"],
-  authors: [{ name: "Okayness Team" }],
+  keywords: ["wellbeing", "mental health", "anonymous community", "emotional check-in", "are we okay", "peer support"],
+  authors: [{ name: "Are We Okay Team" }],
+  alternates: {
+    canonical: "https://areweokay.com",
+  },
   openGraph: {
-    title: "Okayness | Are We Okay?",
+    title: "Are We Okay | Wellbeing Community",
     description: "A daily anonymous emotional check-in community. Join the global wellbeing movement.",
     url: "https://areweokay.com",
-    siteName: "Okayness",
+    siteName: "Are We Okay",
     images: [
       {
         url: "https://areweokay.com/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Okayness Global Wellbeing Movement",
+        alt: "Are We Okay Global Wellbeing Movement",
       },
     ],
     locale: "en_US",
@@ -31,7 +34,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Okayness | A global wellbeing movement",
+    title: "Are We Okay | A global wellbeing movement",
     description: "Share how you feel anonymously, and support others with zero judgment.",
     images: ["https://areweokay.com/twitter-image.jpg"],
   },
@@ -43,16 +46,38 @@ export const metadata: Metadata = {
 
 const structuredData = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Okayness",
-  "operatingSystem": "Web",
-  "applicationCategory": "HealthApplication",
-  "description": "A daily anonymous emotional check-in community where people share how they feel, receive peer support, and support others with zero judgment.",
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "USD"
-  }
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://areweokay.com/#software",
+      "name": "Are We Okay",
+      "operatingSystem": "Android, iOS, Web",
+      "applicationCategory": "HealthApplication",
+      "description": "A daily anonymous emotional check-in community where people share how they feel, receive peer support, and support others with zero judgment.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "screenshot": "https://areweokay.com/og-image.jpg"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://areweokay.com/#organization",
+      "name": "Are We Okay",
+      "url": "https://areweokay.com",
+      "logo": "https://areweokay.com/favicon.ico"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://areweokay.com/#website",
+      "url": "https://areweokay.com",
+      "name": "Are We Okay",
+      "publisher": {
+        "@id": "https://areweokay.com/#organization"
+      }
+    }
+  ]
 };
 
 export default function RootLayout({

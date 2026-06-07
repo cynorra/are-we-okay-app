@@ -1,4 +1,4 @@
-package com.example.okayness
+package com.cynorra.areweokay
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import com.example.okayness.data.DefaultDataRepository
-import com.example.okayness.data.LocalDataRepository
-import com.example.okayness.theme.OkaynessTheme
+import com.cynorra.areweokay.data.DefaultDataRepository
+import com.cynorra.areweokay.data.LocalDataRepository
+import com.cynorra.areweokay.theme.AreWeOkayTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var dataRepository: DefaultDataRepository
@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
         dataRepository = DefaultDataRepository(applicationContext)
 
         setContent {
-            OkaynessTheme {
+            AreWeOkayTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.background

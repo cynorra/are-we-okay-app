@@ -1,4 +1,4 @@
-package com.example.okayness.data
+package com.cynorra.areweokay.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -135,4 +135,22 @@ object SupabaseApi {
             response.body?.string() ?: ""
         }
     }
+
+    suspend fun signInWithPassword(email: String, password: String): String = withContext(Dispatchers.IO) {
+        val authUrl = "https://pmtqntkipmamthoiddtl.supabase.co/auth/v1/token?grant_type=password"
+        val bodyJson = """{"email":"$email","password":"$password"}"""
+        val requestBody = bodyJson.toRequestBody(mediaType)
+        val request = Request.Builder()
+            .url(authUrl)
+            .post(requestBody)
+            .addHeader("apikey", API_KEY)
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Geçersiz e-posta veya şifre.")
+            response.body?.string() ?: ""
+        }
+    }
 }
+

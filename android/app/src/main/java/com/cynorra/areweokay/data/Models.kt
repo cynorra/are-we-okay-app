@@ -1,4 +1,4 @@
-package com.example.okayness.data
+package com.cynorra.areweokay.data
 
 import kotlinx.serialization.Serializable
 

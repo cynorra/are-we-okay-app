@@ -1,4 +1,4 @@
-package com.example.okayness.theme
+package com.cynorra.areweokay.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -30,7 +30,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun OkaynessTheme(
+fun AreWeOkayTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

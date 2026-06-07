@@ -6,4 +6,60 @@ Disallow: /map
 Disallow: /insights
 Disallow: /friends
 Disallow: /settings
+
+# Explicitly allow AI Crawlers for AEO / GEO (Answer Engine Optimization)
+User-agent: GPTBot
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /checkin
+Disallow: /feed
+Disallow: /map
+Disallow: /insights
+Disallow: /friends
+Disallow: /settings
+
 Sitemap: https://areweokay.com/sitemap.xml

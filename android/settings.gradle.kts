@@ -29,5 +29,6 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-rootProject.name = "Okayness"
+
+rootProject.name = "Are We Okay"
 include(":app")
