@@ -42,8 +42,8 @@ data class SupabasePostResponse(
 )
 
 object SupabaseApi {
-    private const val BASE_URL = "https://hxrtdousculuijqgaovg.supabase.co/rest/v1"
-    private const val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4cnRkb3VzY3VsdWlqcWdhb3ZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODQ2NzEyMCwiZXhwIjoyMDk0MDQzMTIwfQ.nVMBLRP9EfyOPMHLwnWF8x-e1pOKYUBEfY0lAnvJyaY"
+    private const val BASE_URL = "https://pmtqntkipmamthoiddtl.supabase.co/rest/v1"
+    private const val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtdHFudGtpcG1hbXRob2lkZHRsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzM4NTIzOSwiZXhwIjoyMDkyOTYxMjM5fQ._h8st17YkDP3-7o2vhocSASKXppOO_EpgsaR2U0DBd8"
 
     val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -59,7 +59,7 @@ object SupabaseApi {
     private val mediaType = "application/json; charset=utf-8".toMediaType()
 
     suspend fun createAuthUser(email: String): String = withContext(Dispatchers.IO) {
-        val authUrl = "https://hxrtdousculuijqgaovg.supabase.co/auth/v1/admin/users"
+        val authUrl = "https://pmtqntkipmamthoiddtl.supabase.co/auth/v1/admin/users"
         val bodyJson = """{"email":"$email","password":"okayness123!","email_confirm":true}"""
         val requestBody = bodyJson.toRequestBody(mediaType)
         val request = Request.Builder()
