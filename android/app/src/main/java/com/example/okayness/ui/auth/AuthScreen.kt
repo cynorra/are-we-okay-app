@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,12 +43,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import com.example.okayness.R
 import com.example.okayness.data.LocalDataRepository
 import com.example.okayness.theme.OkBeige
 import com.example.okayness.theme.OkBlack
@@ -141,155 +151,7 @@ fun GoogleSignInButton(
     }
 }
 
-@Composable
-fun MockGoogleAccountPickerDialog(
-    onDismiss: () -> Unit,
-    onAccountSelected: (email: String, name: String) -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(28.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDADCE0))
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header Google Logo
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    GoogleIcon(modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Google",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF202124)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "Okayness uygulamasına devam et",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF202124),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Bir hesap seçin",
-                    fontSize = 13.sp,
-                    color = Color(0xFF5F6368),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
-                )
-                
-                // Accounts list
-                val accounts = listOf(
-                    Pair("Eren Şen", "erens.dev@gmail.com"),
-                    Pair("Ahmet Yılmaz", "ahmet.yilmaz@gmail.com"),
-                    Pair("Buse Kaya", "buse.kaya@gmail.com")
-                )
-                
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    accounts.forEach { (name, email) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { onAccountSelected(email, name) }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFE8F0FE)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = name.take(1),
-                                    color = Color(0xFF1A73E8),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = name,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF3C4043)
-                                )
-                                Text(
-                                    text = email,
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF5F6368)
-                                )
-                            }
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(Color(0xFFF1F3F4))
-                        )
-                    }
-                    
-                    // Other option
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                val randomId = UUID.randomUUID().toString().substring(0, 4)
-                                onAccountSelected("kullanici_$randomId@gmail.com", "Yeni Kullanıcı")
-                            }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Başka hesap",
-                            tint = Color(0xFF1A73E8),
-                            modifier = Modifier.size(24.dp).padding(start = 6.dp)
-                        )
-                        Spacer(modifier = Modifier.width(18.dp))
-                        Text(
-                            text = "Başka bir hesap kullan",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A73E8)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = "Devam etmek için Google; adınızı, e-posta adresinizi, profil resminizi ve dil tercihinizi Okayness ile paylaşır. Kullanmaya başlamadan önce gizlilik politikasını okuyabilirsiniz.",
-                    fontSize = 11.sp,
-                    color = Color(0xFF5F6368),
-                    lineHeight = 15.sp,
-                    textAlign = TextAlign.Start
-                )
-            }
-        }
-    }
-}
+
 
 @Composable
 fun AuthScreen(
@@ -297,10 +159,88 @@ fun AuthScreen(
     modifier: Modifier = Modifier
 ) {
     val dataRepository = LocalDataRepository.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
     var selectedMood by remember { mutableStateOf<String?>(null) }
-    var showGooglePicker by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val scrollState = rememberScrollState()
+
+    val triggerGoogleSignIn = {
+        coroutineScope.launch {
+            try {
+                val clientId = context.getString(R.string.google_web_client_id)
+                if (clientId.isBlank() || clientId.startsWith("your_google_web_client_id")) {
+                    errorMessage = "Lütfen strings.xml dosyasında geçerli bir Google Web Client ID tanımlayın."
+                    return@launch
+                }
+                
+                val credentialManager = CredentialManager.create(context)
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(clientId)
+                    .setAutoSelectEnabled(false)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = credentialManager.getCredential(
+                    context = context,
+                    request = request
+                )
+                
+                val credential = result.credential
+                if (credential is GoogleIdTokenCredential) {
+                    val email = credential.id
+                    val name = credential.displayName ?: email.substringBefore("@")
+                    
+                    val signInResult = dataRepository.signIn(email)
+                    val userProfile = if (signInResult.isSuccess) {
+                        signInResult.getOrNull()
+                    } else {
+                        // User does not exist, automatically sign them up
+                        val cleanUsername = email.substringBefore("@").replace(".", "_")
+                        val signUpResult = dataRepository.signUp(
+                            email = email,
+                            username = cleanUsername,
+                            avatarEmoji = "😎"
+                        )
+                        signUpResult.getOrNull()
+                    }
+                    
+                    if (userProfile != null) {
+                        // Automatically create public checkin if mood button was clicked
+                        selectedMood?.let { moodKey ->
+                            val moodState = when (moodKey) {
+                                "good" -> com.example.okayness.data.MoodState.good
+                                "bad" -> com.example.okayness.data.MoodState.bad
+                                else -> com.example.okayness.data.MoodState.unsure
+                            }
+                            dataRepository.createCheckin(
+                                mood = moodState,
+                                note = "",
+                                isPublic = true
+                            )
+                        }
+                        onAuthSuccess()
+                    } else {
+                        errorMessage = "Kullanıcı profil kaydı oluşturulamadı."
+                    }
+                } else {
+                    errorMessage = "Geçersiz kimlik bilgisi türü alındı."
+                }
+            } catch (e: GetCredentialCancellationException) {
+                // User cancelled, do nothing
+            } catch (e: GetCredentialException) {
+                errorMessage = "Google girişi başarısız oldu: ${e.localizedMessage}"
+            } catch (e: Exception) {
+                errorMessage = "Beklenmeyen hata: ${e.localizedMessage}"
+            }
+        }
+    }
 
     // Premium background gradient
     val backgroundBrush = Brush.verticalGradient(
@@ -399,7 +339,7 @@ fun AuthScreen(
                         Button(
                             onClick = {
                                 selectedMood = moodKey
-                                showGooglePicker = true
+                                triggerGoogleSignIn()
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -431,7 +371,7 @@ fun AuthScreen(
                     GoogleSignInButton(
                         onClick = { 
                             selectedMood = null
-                            showGooglePicker = true 
+                            triggerGoogleSignIn()
                         }
                     )
                 }
@@ -448,44 +388,46 @@ fun AuthScreen(
             )
         }
 
-        // Google Picker Dialog
-        if (showGooglePicker) {
-            MockGoogleAccountPickerDialog(
-                onDismiss = { showGooglePicker = false },
-                onAccountSelected = { email, name ->
-                    showGooglePicker = false
-                    val result = dataRepository.signIn(email)
-                    val userProfile = if (result.isSuccess) {
-                        result.getOrNull()
-                    } else {
-                        // User does not exist, automatically sign them up
-                        val cleanUsername = email.substringBefore("@").replace(".", "_")
-                        val signUpResult = dataRepository.signUp(
-                            email = email,
-                            username = cleanUsername,
-                            avatarEmoji = "😎"
+        // Error Dialog
+        if (errorMessage != null) {
+            Dialog(onDismissRequest = { errorMessage = null }) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .border(1.dp, OkBorder, RoundedCornerShape(28.dp)),
+                    colors = CardDefaults.cardColors(containerColor = OkSurface),
+                    shape = RoundedCornerShape(28.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Giriş Hatası",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OkBlack
                         )
-                        signUpResult.getOrNull()
-                    }
-                    
-                    if (userProfile != null) {
-                        // Automatically create public checkin if mood button was clicked
-                        selectedMood?.let { moodKey ->
-                            val moodState = when (moodKey) {
-                                "good" -> com.example.okayness.data.MoodState.good
-                                "bad" -> com.example.okayness.data.MoodState.bad
-                                else -> com.example.okayness.data.MoodState.unsure
-                            }
-                            dataRepository.createCheckin(
-                                mood = moodState,
-                                note = "",
-                                isPublic = true
-                            )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = errorMessage ?: "",
+                            fontSize = 14.sp,
+                            color = OkMuted,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(
+                            onClick = { errorMessage = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = OkOrange),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Text(text = "Kapat", color = Color.White)
                         }
-                        onAuthSuccess()
                     }
                 }
-            )
+            }
         }
     }
 }

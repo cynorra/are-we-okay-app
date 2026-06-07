@@ -91,4 +91,9 @@ dependencies {
 
   // OkHttp
   implementation(libs.okhttp)
+
+  // Google Credential Manager (Sign-In)
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services.auth)
+  implementation(libs.googleid)
 }

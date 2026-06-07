@@ -285,30 +285,7 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
       return { error: e.message || 'Failed to initiate Google sign in' };
     }
   } else {
-    // Local mode simulation: pick a random google account
-    const email = 'erens.dev@gmail.com';
-    const username = 'erens_dev';
-    const users = getLocal<UserProfile[]>('ok_users', []);
-    let user = users.find(u => u.email === email);
-    if (!user) {
-      user = {
-        id: 'usr-' + Math.random().toString(36).substr(2, 9),
-        email,
-        username,
-        avatar_emoji: '😎',
-        role: 'user',
-        created_at: new Date().toISOString()
-      };
-      users.push(user);
-      setLocal('ok_users', users);
-    }
-    setLocal('ok_session', user);
-    
-    // In local mode, redirect directly to /checkin since there is no server callback
-    if (typeof window !== 'undefined') {
-      window.location.href = '/checkin';
-    }
-    return { error: null };
+    return { error: 'Google Sign In is not configured. Please define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.' };
   }
 }
 

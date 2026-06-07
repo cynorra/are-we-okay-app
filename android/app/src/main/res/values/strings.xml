@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Okayness</string>
+    <!-- Configure Google OAuth Web Client ID here. You can get this from Google Cloud Console under credentials -->
+    <string name="google_web_client_id">your_google_web_client_id_here.apps.googleusercontent.com</string>
 </resources>
