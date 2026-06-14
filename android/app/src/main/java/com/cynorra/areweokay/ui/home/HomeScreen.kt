@@ -48,6 +48,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,10 +92,10 @@ fun HomeScreen(
     
     val navigationItems = listOf(
         Triple("Check-in", Icons.Default.Check, 0),
-        Triple("Feed", Icons.Default.Home, 1),
-        Triple("Friends", Icons.Default.Person, 2),
-        Triple("Insights", Icons.Default.Star, 3),
-        Triple("Settings", Icons.Default.Settings, 4)
+        Triple("Akış", Icons.Default.Home, 1),
+        Triple("Arkadaşlar", Icons.Default.Person, 2),
+        Triple("Analizler", Icons.Default.Star, 3),
+        Triple("Ayarlar", Icons.Default.Settings, 4)
     )
 
     Scaffold(
@@ -145,6 +148,7 @@ fun HomeScreen(
 @Composable
 fun CheckinTab() {
     val dataRepository = LocalDataRepository.current
+    val coroutineScope = rememberCoroutineScope()
     var mood by remember { mutableStateOf<MoodState?>(null) }
     var note by remember { mutableStateOf("") }
     var isPublic by remember { mutableStateOf(true) }
@@ -278,7 +282,7 @@ fun CheckinTab() {
                         OutlinedTextField(
                             value = note,
                             onValueChange = { note = it },
-                            placeholder = { Text("How has your day been? Write it here...", color = OkMuted) },
+                            placeholder = { Text("Günün nasıl geçti? Buraya yaz...", color = OkMuted) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(120.dp),
@@ -335,11 +339,13 @@ fun CheckinTab() {
 
                         Button(
                             onClick = {
-                                val result = dataRepository.createCheckin(mood!!, note, isPublic)
-                                if (result.isSuccess) {
-                                    checkinSuccess = true
-                                } else {
-                                    errorMsg = result.exceptionOrNull()?.message ?: "Check-in failed"
+                                coroutineScope.launch {
+                                    val result = dataRepository.createCheckin(mood!!, note, isPublic)
+                                    if (result.isSuccess) {
+                                        checkinSuccess = true
+                                    } else {
+                                        errorMsg = result.exceptionOrNull()?.message ?: "Check-in failed"
+                                    }
                                 }
                             },
                             modifier = Modifier
@@ -348,7 +354,7 @@ fun CheckinTab() {
                             colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text("Complete Check-in", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text("Check-in'i Tamamla", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         }
                     }
                 }
@@ -364,6 +370,7 @@ fun CheckinTab() {
 fun FeedTab() {
     val dataRepository = LocalDataRepository.current
     val posts by dataRepository.feedPosts.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -414,11 +421,13 @@ fun FeedTab() {
                     FeedPostCard(
                         post = post,
                         onReactionClick = { reaction ->
-                            val active = post.userReactions.contains(reaction)
-                            if (active) {
-                                dataRepository.removeReaction(post.id, reaction)
-                            } else {
-                                dataRepository.addReaction(post.id, reaction)
+                            coroutineScope.launch {
+                                val active = post.userReactions.contains(reaction)
+                                if (active) {
+                                    dataRepository.removeReaction(post.id, reaction)
+                                } else {
+                                    dataRepository.addReaction(post.id, reaction)
+                                }
                             }
                         },
                         onAddComment = { content ->
@@ -639,7 +648,7 @@ fun FeedPostCard(
                     OutlinedTextField(
                         value = commentText,
                         onValueChange = { commentText = it },
-                        placeholder = { Text("Write a supportive comment...", fontSize = 13.sp, color = OkMuted) },
+                        placeholder = { Text("Destekleyici bir yorum yaz...", fontSize = 13.sp, color = OkMuted) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -693,20 +702,31 @@ fun FeedPostCard(
 @Composable
 fun FriendsTab() {
     val dataRepository = LocalDataRepository.current
+    val coroutineScope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf(emptyList<UserProfile>()) }
-    var friendRequests by remember { mutableStateOf(dataRepository.getFriendRequests()) }
-    var friendsWithMoods by remember { mutableStateOf(dataRepository.getFriendsWithMoods()) }
+    var friendRequests by remember { mutableStateOf<List<com.cynorra.areweokay.data.FriendRequestItem>>(emptyList()) }
+    var friendsWithMoods by remember { mutableStateOf<List<com.cynorra.areweokay.data.FriendWithMood>>(emptyList()) }
 
     // Search query update
     val performSearch = { query: String ->
-        searchResults = if (query.isEmpty()) emptyList() else dataRepository.searchUsers(query)
+        coroutineScope.launch {
+            searchResults = if (query.isEmpty()) emptyList() else dataRepository.searchUsers(query)
+        }
     }
 
     val refreshLists = {
-        friendRequests = dataRepository.getFriendRequests()
-        friendsWithMoods = dataRepository.getFriendsWithMoods()
-        performSearch(searchQuery)
+        coroutineScope.launch {
+            friendRequests = dataRepository.getFriendRequests()
+            friendsWithMoods = dataRepository.getFriendsWithMoods()
+            if (searchQuery.isNotEmpty()) {
+                performSearch(searchQuery)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshLists()
     }
 
     Column(
@@ -716,7 +736,7 @@ fun FriendsTab() {
             .padding(24.dp)
     ) {
         Text(
-            text = "Friends",
+            text = "Arkadaşlar",
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
@@ -738,7 +758,7 @@ fun FriendsTab() {
                         performSearch(it)
                     },
                     leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = OkMuted) },
-                    placeholder = { Text("Search profiles to connect...", color = OkMuted) },
+                    placeholder = { Text("Bağlantı kurmak için profil ara...", color = OkMuted) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -785,8 +805,10 @@ fun FriendsTab() {
 
                             Button(
                                 onClick = {
-                                    if (dataRepository.sendFriendRequest(resultUser.id)) {
-                                        refreshLists()
+                                    coroutineScope.launch {
+                                        if (dataRepository.sendFriendRequest(resultUser.id)) {
+                                            refreshLists()
+                                        }
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = OkOrange),
@@ -794,7 +816,7 @@ fun FriendsTab() {
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 modifier = Modifier.height(30.dp)
                             ) {
-                                Text("Add", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Ekle", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -807,7 +829,7 @@ fun FriendsTab() {
         // Incoming Friend Requests
         if (friendRequests.isNotEmpty()) {
             Text(
-                text = "Pending Requests",
+                text = "Bekleyen İstekler",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = OkBlack
@@ -842,14 +864,16 @@ fun FriendsTab() {
 
                         Button(
                             onClick = {
-                                if (dataRepository.acceptFriendRequest(req.id)) {
-                                    refreshLists()
+                                coroutineScope.launch {
+                                    if (dataRepository.acceptFriendRequest(req.id)) {
+                                        refreshLists()
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Accept", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Kabul Et", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -859,7 +883,7 @@ fun FriendsTab() {
 
         // Friends List
         Text(
-            text = "Your Circle",
+            text = "Çevren",
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             color = OkBlack
@@ -880,14 +904,14 @@ fun FriendsTab() {
                     Text(text = "🤝", fontSize = 36.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Build your support circle",
+                        text = "Destek çevreni oluştur",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = OkBlack
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Search profiles and add friends to see how they're doing.",
+                        text = "Profil ara ve arkadaşlarının nasıl olduğunu görmek için ekle.",
                         fontSize = 12.sp,
                         color = OkMuted,
                         textAlign = TextAlign.Center
@@ -952,7 +976,7 @@ fun FriendsTab() {
                             }
                         } else {
                             Text(
-                                text = "no check-in",
+                                text = "check-in yok",
                                 color = OkMuted,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -971,8 +995,13 @@ fun FriendsTab() {
 @Composable
 fun InsightsTab() {
     val dataRepository = LocalDataRepository.current
-    var stats by remember { mutableStateOf(dataRepository.getUserStats()) }
-    var weeklyMoods by remember { mutableStateOf(dataRepository.getWeeklyMoods()) }
+    var stats by remember { mutableStateOf(com.cynorra.areweokay.data.UserStats(0, 0, com.cynorra.areweokay.data.MoodCounts(0,0,0))) }
+    var weeklyMoods by remember { mutableStateOf<List<com.cynorra.areweokay.data.WeeklyMood>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        stats = dataRepository.getUserStats()
+        weeklyMoods = dataRepository.getWeeklyMoods()
+    }
 
     Column(
         modifier = Modifier
@@ -981,7 +1010,7 @@ fun InsightsTab() {
             .padding(24.dp)
     ) {
         Text(
-            text = "Insights",
+            text = "Analizler",
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
@@ -1012,7 +1041,7 @@ fun InsightsTab() {
                         color = OkBlack
                     )
                     Text(
-                        text = "Current Streak",
+                        text = "Günlük Seri",
                         fontSize = 12.sp,
                         color = OkMuted
                     )
@@ -1037,7 +1066,7 @@ fun InsightsTab() {
                         color = OkBlack
                     )
                     Text(
-                        text = "Support Shared",
+                        text = "Verilen Destek",
                         fontSize = 12.sp,
                         color = OkMuted
                     )
@@ -1056,7 +1085,7 @@ fun InsightsTab() {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Weekly Reflection History",
+                    text = "Haftalık Geçmiş",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = OkBlack
@@ -1108,7 +1137,7 @@ fun InsightsTab() {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Mood Breakdown",
+                    text = "Ruh Hali Dağılımı",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = OkBlack
@@ -1185,6 +1214,7 @@ fun SettingsTab(
 ) {
     val dataRepository = LocalDataRepository.current
     val currentUser by dataRepository.currentUser.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     var username by remember { mutableStateOf(currentUser?.username ?: "") }
     var selectedEmoji by remember { mutableStateOf(currentUser?.avatar_emoji ?: "🌙") }
@@ -1200,7 +1230,7 @@ fun SettingsTab(
             .padding(24.dp)
     ) {
         Text(
-            text = "Settings",
+            text = "Ayarlar",
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
@@ -1216,7 +1246,7 @@ fun SettingsTab(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Edit Profile",
+                    text = "Profili Düzenle",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = OkBlack
@@ -1225,7 +1255,7 @@ fun SettingsTab(
 
                 if (updateSuccess) {
                     Text(
-                        text = "Profile updated successfully!",
+                        text = "Profil başarıyla güncellendi!",
                         color = Color(0xFF2E7D32),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -1250,7 +1280,7 @@ fun SettingsTab(
                         updateSuccess = false
                         errorMsg = null
                     },
-                    label = { Text("Display Username") },
+                    label = { Text("Kullanıcı Adı") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1263,7 +1293,7 @@ fun SettingsTab(
 
                 // Avatar emoji picker
                 Text(
-                    text = "Choose Your Avatar:",
+                    text = "Avatarını Seç:",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = OkBlack
@@ -1340,11 +1370,13 @@ fun SettingsTab(
                             errorMsg = "Username cannot be empty."
                             return@Button
                         }
-                        val result = dataRepository.updateProfile(username, selectedEmoji)
-                        if (result.isSuccess) {
-                            updateSuccess = true
-                        } else {
-                            errorMsg = result.exceptionOrNull()?.message ?: "Update failed."
+                        coroutineScope.launch {
+                            val result = dataRepository.updateProfile(username, selectedEmoji)
+                            if (result.isSuccess) {
+                                updateSuccess = true
+                            } else {
+                                errorMsg = result.exceptionOrNull()?.message ?: "Update failed."
+                            }
                         }
                     },
                     modifier = Modifier
@@ -1353,7 +1385,7 @@ fun SettingsTab(
                     colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Save Settings", fontWeight = FontWeight.Bold)
+                    Text("Ayarları Kaydet", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1369,14 +1401,14 @@ fun SettingsTab(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Sign Out",
+                    text = "Çıkış Yap",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = OkBlack
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "To clear your session and sign in with a different profile, click below.",
+                    text = "Oturumunuzu kapatmak ve farklı bir profil ile giriş yapmak için aşağıya tıklayın.",
                     fontSize = 13.sp,
                     color = OkMuted
                 )
@@ -1393,7 +1425,7 @@ fun SettingsTab(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Sign Out", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Çıkış Yap", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

@@ -34,25 +34,25 @@ interface DataRepository {
     val currentUser: StateFlow<UserProfile?>
     val feedPosts: StateFlow<List<Post>>
     fun getCurrentUserSync(): UserProfile?
-    fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile>
-    fun signIn(email: String): Result<UserProfile>
-    fun signInWithPassword(email: String, password: String): Result<UserProfile>
+    suspend fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile>
+    suspend fun signIn(email: String): Result<UserProfile>
+    suspend fun signInWithPassword(email: String, password: String): Result<UserProfile>
     fun signOut()
-    fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile>
+    suspend fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile>
     
-    fun createCheckin(mood: MoodState, note: String, isPublic: Boolean): Result<Checkin>
+    suspend fun createCheckin(mood: MoodState, note: String, isPublic: Boolean): Result<Checkin>
     fun getFeedPosts(): List<Post>
-    fun addReaction(postId: String, reactionType: String): Boolean
-    fun removeReaction(postId: String, reactionType: String): Boolean
+    suspend fun addReaction(postId: String, reactionType: String): Boolean
+    suspend fun removeReaction(postId: String, reactionType: String): Boolean
     fun addComment(postId: String, content: String): Comment?
     
-    fun searchUsers(query: String): List<UserProfile>
-    fun sendFriendRequest(targetUserId: String): Boolean
-    fun getFriendRequests(): List<FriendRequestItem>
-    fun acceptFriendRequest(requestId: String): Boolean
-    fun getFriendsWithMoods(): List<FriendWithMood>
+    suspend fun searchUsers(query: String): List<UserProfile>
+    suspend fun sendFriendRequest(targetUserId: String): Boolean
+    suspend fun getFriendRequests(): List<FriendRequestItem>
+    suspend fun acceptFriendRequest(requestId: String): Boolean
+    suspend fun getFriendsWithMoods(): List<FriendWithMood>
     
-    fun getUserStats(): UserStats
+    suspend fun getUserStats(): UserStats
     fun getWeeklyMoods(): List<WeeklyMood>
 }
 
@@ -178,21 +178,21 @@ class DefaultDataRepository(context: Context) : DataRepository {
         return _currentUser.value
     }
 
-    override fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile> {
-        return runBlocking {
+    override suspend fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile> {
+        return withContext(Dispatchers.IO) {
             try {
                 // Check if user already exists
                 val checkRaw = SupabaseApi.get("/users?email=eq.$email")
                 val existingUsers = json.decodeFromString<List<UserProfile>>(checkRaw)
                 if (existingUsers.isNotEmpty()) {
-                    return@runBlocking Result.failure(Exception("Email already registered."))
+                    return@withContext Result.failure(Exception("Email already registered."))
                 }
 
                 // Check username
                 val checkUsernameRaw = SupabaseApi.get("/users?username=eq.$username")
                 val existingUsernames = json.decodeFromString<List<UserProfile>>(checkUsernameRaw)
                 if (existingUsernames.isNotEmpty()) {
-                    return@runBlocking Result.failure(Exception("Username already taken."))
+                    return@withContext Result.failure(Exception("Username already taken."))
                 }
 
                 // Create user in Supabase Auth first using the Admin API to get a valid UUID
@@ -226,8 +226,8 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun signIn(email: String): Result<UserProfile> {
-        return runBlocking {
+    override suspend fun signIn(email: String): Result<UserProfile> {
+        return withContext(Dispatchers.IO) {
             try {
                 // Query by email or username
                 val query = if (email.contains("@")) "email=eq.$email" else "username=eq.$email"
@@ -235,7 +235,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
                 val users = json.decodeFromString<List<UserProfile>>(rawJson)
                 
                 if (users.isEmpty()) {
-                    return@runBlocking Result.failure(Exception("User not found. Try signing up!"))
+                    return@withContext Result.failure(Exception("User not found. Try signing up!"))
                 }
                 
                 val user = users.first()
@@ -252,15 +252,15 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun signInWithPassword(email: String, password: String): Result<UserProfile> {
-        return runBlocking {
+    override suspend fun signInWithPassword(email: String, password: String): Result<UserProfile> {
+        return withContext(Dispatchers.IO) {
             try {
                 SupabaseApi.signInWithPassword(email, password)
                 val query = "email=eq.$email"
                 val rawJson = SupabaseApi.get("/users?$query")
                 val users = json.decodeFromString<List<UserProfile>>(rawJson)
                 if (users.isEmpty()) {
-                    return@runBlocking Result.failure(Exception("User profile not found."))
+                    return@withContext Result.failure(Exception("User profile not found."))
                 }
                 val user = users.first()
                 prefs.edit().putString("ok_session", json.encodeToString(user)).apply()
@@ -283,15 +283,15 @@ class DefaultDataRepository(context: Context) : DataRepository {
         refreshFeed()
     }
 
-    override fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile> {
+    override suspend fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile> {
         val current = _currentUser.value ?: return Result.failure(Exception("You must be logged in"))
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 // Check if username is taken
                 val checkUsernameRaw = SupabaseApi.get("/users?username=eq.$username&id=neq.${current.id}")
                 val existingUsernames = json.decodeFromString<List<UserProfile>>(checkUsernameRaw)
                 if (existingUsernames.isNotEmpty()) {
-                    return@runBlocking Result.failure(Exception("Username already taken."))
+                    return@withContext Result.failure(Exception("Username already taken."))
                 }
 
                 val updated = current.copy(username = username, avatar_emoji = avatarEmoji)
@@ -309,9 +309,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun createCheckin(mood: MoodState, note: String, isPublic: Boolean): Result<Checkin> {
+    override suspend fun createCheckin(mood: MoodState, note: String, isPublic: Boolean): Result<Checkin> {
         val current = _currentUser.value ?: return Result.failure(Exception("You must be logged in to check in"))
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 val checkinId = UUID.randomUUID().toString()
                 val newCheckin = Checkin(
@@ -365,9 +365,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         return _feedPosts.value
     }
 
-    override fun addReaction(postId: String, reactionType: String): Boolean {
+    override suspend fun addReaction(postId: String, reactionType: String): Boolean {
         val current = _currentUser.value ?: return false
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 val body = mapOf(
                     "post_id" to postId,
@@ -384,9 +384,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun removeReaction(postId: String, reactionType: String): Boolean {
+    override suspend fun removeReaction(postId: String, reactionType: String): Boolean {
         val current = _currentUser.value ?: return false
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 SupabaseApi.delete("/reactions?post_id=eq.$postId&user_id=eq.${current.id}&type=eq.$reactionType")
                 refreshFeed()
@@ -421,9 +421,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         return newComment
     }
 
-    override fun searchUsers(query: String): List<UserProfile> {
+    override suspend fun searchUsers(query: String): List<UserProfile> {
         val current = _currentUser.value ?: return emptyList()
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 val rawJson = SupabaseApi.get("/users?username=ilike.*$query*&id=neq.${current.id}")
                 json.decodeFromString<List<UserProfile>>(rawJson)
@@ -433,9 +433,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun sendFriendRequest(targetUserId: String): Boolean {
+    override suspend fun sendFriendRequest(targetUserId: String): Boolean {
         val current = _currentUser.value ?: return false
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 val body = mapOf(
                     "requester_id" to current.id,
@@ -451,9 +451,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun getFriendRequests(): List<FriendRequestItem> {
+    override suspend fun getFriendRequests(): List<FriendRequestItem> {
         val current = _currentUser.value ?: return emptyList()
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 val rawJson = SupabaseApi.get("/friendships?addressee_id=eq.${current.id}&status=eq.pending&select=*,requester:requester_id(*)")
                 val friendships = json.decodeFromString<List<FriendshipWithRequester>>(rawJson)
@@ -464,9 +464,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun acceptFriendRequest(requestId: String): Boolean {
+    override suspend fun acceptFriendRequest(requestId: String): Boolean {
         val current = _currentUser.value ?: return false
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 SupabaseApi.patch("/friendships?id=eq.$requestId", "{\"status\":\"accepted\"}")
                 fetchFriendships(current.id)
@@ -477,7 +477,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun getFriendsWithMoods(): List<FriendWithMood> {
+    override suspend fun getFriendsWithMoods(): List<FriendWithMood> {
         val current = _currentUser.value ?: return emptyList()
         val acceptedFriendships = _friendships.value.filter { it.status == "accepted" }
         if (acceptedFriendships.isEmpty()) return emptyList()
@@ -486,7 +486,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
             if (it.requester_id == current.id) it.addressee_id else it.requester_id
         }
 
-        return runBlocking {
+        return withContext(Dispatchers.IO) {
             try {
                 val idsString = friendIds.joinToString(",") { it }
                 val rawUsersJson = SupabaseApi.get("/users?id=in.($idsString)")
@@ -506,13 +506,13 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun getUserStats(): UserStats {
+    override suspend fun getUserStats(): UserStats {
         val current = _currentUser.value ?: return UserStats(0, 0, MoodCounts())
         val checkins = _userCheckins.value
         
         val streak = calculateStreak(checkins)
 
-        val supportGiven = runBlocking {
+        val supportGiven = withContext(Dispatchers.IO) {
             try {
                 val rawJson = SupabaseApi.get("/reactions?user_id=eq.${current.id}&select=count")
                 val countList = json.decodeFromString<List<CountResponse>>(rawJson)

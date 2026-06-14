@@ -294,7 +294,7 @@ fun AuthScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Are We Okay?",
+                text = "İyi Miyiz?",
                 fontSize = 44.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = OkBlack,
@@ -303,7 +303,7 @@ fun AuthScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "A global wellbeing movement. Check in daily, share how you feel anonymously, and support each other with zero judgment.",
+                text = "Global bir iyilik hareketi. Her gün check-in yap, nasıl hissettiğini anonim paylaş ve yargılanmadan destek bul.",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Medium,
                 color = OkMuted,
@@ -327,7 +327,7 @@ fun AuthScreen(
                 ) {
                     if (!showEmailLogin) {
                         Text(
-                            text = "How is your day going?",
+                            text = "Günün nasıl geçiyor?",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = OkBlack
@@ -336,9 +336,9 @@ fun AuthScreen(
 
                         // Mood Buttons (directly triggers Google Sign-in on click)
                         val moodButtons = listOf(
-                            Triple("good", "😎", "We're Good"),
-                            Triple("bad", "😔", "We're Not"),
-                            Triple("unsure", "🤔", "Not Sure")
+                            Triple("good", "😎", "İyiyiz"),
+                            Triple("bad", "😔", "İyi Değiliz"),
+                            Triple("unsure", "🤔", "Emin Değilim")
                         )
 
                         moodButtons.forEach { (moodKey, emoji, label) ->
@@ -484,7 +484,7 @@ fun AuthScreen(
             
             // Footer Text
             Text(
-                text = "Together, we're better. ❤️",
+                text = "Birlikte daha iyiyiz. ❤️",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = OkOrangeShade
