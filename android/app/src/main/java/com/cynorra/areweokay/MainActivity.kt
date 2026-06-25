@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import com.cynorra.areweokay.data.DefaultDataRepository
 import com.cynorra.areweokay.data.LocalDataRepository
 import com.cynorra.areweokay.theme.AreWeOkayTheme
+import com.google.android.gms.ads.MobileAds
 
 class MainActivity : ComponentActivity() {
     private lateinit var dataRepository: DefaultDataRepository
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         dataRepository = DefaultDataRepository(applicationContext)
+        MobileAds.initialize(this) {}
 
         setContent {
             AreWeOkayTheme {

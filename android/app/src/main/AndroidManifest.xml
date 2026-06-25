@@ -11,6 +11,11 @@
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.AreWeOkay">
+        
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-4674211063760769~9947234245"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

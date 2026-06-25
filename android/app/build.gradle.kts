@@ -14,8 +14,8 @@ android {
         applicationId = "com.cynorra.areweokay"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     signingConfigs {
@@ -117,4 +117,7 @@ dependencies {
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services.auth)
   implementation(libs.googleid)
+
+  // AdMob
+  implementation(libs.play.services.ads)
 }
