@@ -34,9 +34,7 @@ interface DataRepository {
     val currentUser: StateFlow<UserProfile?>
     val feedPosts: StateFlow<List<Post>>
     fun getCurrentUserSync(): UserProfile?
-    suspend fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile>
-    suspend fun signIn(email: String): Result<UserProfile>
-    suspend fun signInWithPassword(email: String, password: String): Result<UserProfile>
+    suspend fun signInWithGoogleIdToken(idToken: String): Result<UserProfile>
     fun signOut()
     suspend fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile>
     
@@ -44,7 +42,7 @@ interface DataRepository {
     fun getFeedPosts(): List<Post>
     suspend fun addReaction(postId: String, reactionType: String): Boolean
     suspend fun removeReaction(postId: String, reactionType: String): Boolean
-    fun addComment(postId: String, content: String): Comment?
+    suspend fun addComment(postId: String, content: String): Comment?
     
     suspend fun searchUsers(query: String): List<UserProfile>
     suspend fun sendFriendRequest(targetUserId: String): Boolean
@@ -70,25 +68,79 @@ class DefaultDataRepository(context: Context) : DataRepository {
     private val _friendships = MutableStateFlow<List<Friendship>>(emptyList())
 
     private val repositoryScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var refreshJob: kotlinx.coroutines.Job? = null
 
     init {
-        // Load initial session if exists
+        // Cached profile is only used for instant UI while the real session is restored below;
+        // it's discarded if the refresh token is missing or no longer valid.
         val sessionStr = prefs.getString("ok_session", null)
         if (sessionStr != null) {
             try {
-                val user = json.decodeFromString<UserProfile>(sessionStr)
-                _currentUser.value = user
-                repositoryScope.launch {
-                    fetchUserCheckins(user.id)
-                    fetchFriendships(user.id)
-                }
+                _currentUser.value = json.decodeFromString<UserProfile>(sessionStr)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
-        // Fetch feed posts from Supabase
-        refreshFeed()
+        val storedRefreshToken = prefs.getString("refresh_token", null)
+        if (storedRefreshToken != null) {
+            repositoryScope.launch {
+                try {
+                    val session = applySession(SupabaseApi.refreshSession(storedRefreshToken))
+                    val userRaw = SupabaseApi.get("/users?id=eq.${session.user.id}")
+                    val profile = json.decodeFromString<List<UserProfile>>(userRaw).firstOrNull()
+                    if (profile != null) {
+                        prefs.edit().putString("ok_session", json.encodeToString(profile)).apply()
+                        _currentUser.value = profile
+                        fetchUserCheckins(profile.id)
+                        fetchFriendships(profile.id)
+                    } else {
+                        clearSessionState()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    clearSessionState()
+                }
+                refreshFeed()
+            }
+        } else {
+            // No refresh token means we can't restore a real session (e.g. upgrading from an
+            // older build) - drop the stale cached profile rather than showing a logged-in UI
+            // that has no working session behind it.
+            if (sessionStr != null) clearSessionState()
+            refreshFeed()
+        }
+    }
+
+    // Stores the new access token in memory and the refresh token on disk, and schedules a
+    // silent renewal shortly before the access token expires (default lifetime is 1 hour).
+    private fun applySession(sessionJson: String): AuthSessionResponse {
+        val session = json.decodeFromString<AuthSessionResponse>(sessionJson)
+        SupabaseApi.setSession(session.access_token)
+        prefs.edit().putString("refresh_token", session.refresh_token).apply()
+        scheduleTokenRefresh(session.refresh_token, session.expires_in)
+        return session
+    }
+
+    private fun scheduleTokenRefresh(refreshToken: String, expiresInSeconds: Long) {
+        refreshJob?.cancel()
+        refreshJob = repositoryScope.launch {
+            delay((expiresInSeconds - 60).coerceAtLeast(30) * 1000)
+            try {
+                applySession(SupabaseApi.refreshSession(refreshToken))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun clearSessionState() {
+        prefs.edit().remove("ok_session").remove("refresh_token").apply()
+        SupabaseApi.setSession(null)
+        refreshJob?.cancel()
+        _currentUser.value = null
+        _userCheckins.value = emptyList()
+        _friendships.value = emptyList()
     }
 
     private fun getIsoString(date: java.util.Date = java.util.Date()): String {
@@ -117,9 +169,13 @@ class DefaultDataRepository(context: Context) : DataRepository {
         repositoryScope.launch {
             try {
                 // Fetch approved posts and relations
-                val rawJson = SupabaseApi.get("/posts?select=*,users:user_id(username,avatar_emoji),reactions(type,user_id)&deleted_at=is.null&status=eq.approved&order=created_at.desc")
+                val rawJson = SupabaseApi.get(
+                    "/posts?select=*,users:user_id(username,avatar_emoji),reactions(type,user_id)," +
+                        "comments(id,user_id,content,created_at,users:user_id(username,avatar_emoji))" +
+                        "&deleted_at=is.null&status=eq.approved&order=created_at.desc"
+                )
                 val supabasePosts = json.decodeFromString<List<SupabasePostResponse>>(rawJson)
-                
+
                 val mappedPosts = supabasePosts.map { sp ->
                     val reactionGroups = sp.reactions.groupBy { it.type }
                     val rc = ReactionCounts(
@@ -144,7 +200,17 @@ class DefaultDataRepository(context: Context) : DataRepository {
                         created_at = sp.created_at,
                         reactions = rc,
                         userReactions = myReactions,
-                        comments = emptyList() // Comments are mock and not stored in schema
+                        comments = sp.comments.map { c ->
+                            Comment(
+                                id = c.id,
+                                post_id = sp.id,
+                                user_id = c.user_id,
+                                username = c.users?.username ?: "User",
+                                avatar_emoji = c.users?.avatar_emoji ?: "👤",
+                                content = c.content,
+                                created_at = c.created_at
+                            )
+                        }
                     )
                 }
                 _feedPosts.value = mappedPosts
@@ -178,97 +244,49 @@ class DefaultDataRepository(context: Context) : DataRepository {
         return _currentUser.value
     }
 
-    override suspend fun signUp(email: String, username: String, avatarEmoji: String): Result<UserProfile> {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<UserProfile> {
         return withContext(Dispatchers.IO) {
             try {
-                // Check if user already exists
-                val checkRaw = SupabaseApi.get("/users?email=eq.$email")
-                val existingUsers = json.decodeFromString<List<UserProfile>>(checkRaw)
-                if (existingUsers.isNotEmpty()) {
-                    return@withContext Result.failure(Exception("Email already registered."))
+                val session = applySession(SupabaseApi.signInWithIdToken(idToken))
+                val uid = session.user.id
+
+                val existingRaw = SupabaseApi.get("/users?id=eq.$uid")
+                val existing = json.decodeFromString<List<UserProfile>>(existingRaw).firstOrNull()
+
+                val profile = existing ?: run {
+                    val emailPrefix = (session.user.email?.substringBefore("@") ?: "user")
+                        .replace(Regex("[^a-zA-Z0-9_]"), "_")
+                        .ifBlank { "user" }
+
+                    var created: UserProfile? = null
+                    var attempt = 0
+                    while (created == null && attempt < 5) {
+                        val candidateUsername = if (attempt == 0) emailPrefix else "$emailPrefix${(1000..9999).random()}"
+                        val candidate = UserProfile(
+                            id = uid,
+                            email = session.user.email,
+                            username = candidateUsername,
+                            avatar_emoji = "😎",
+                            role = "user",
+                            created_at = getIsoString()
+                        )
+                        try {
+                            SupabaseApi.post("/users", json.encodeToString(candidate))
+                            created = candidate
+                        } catch (e: IOException) {
+                            attempt++
+                        }
+                    }
+                    created ?: return@withContext Result.failure(Exception("Profil oluşturulamadı."))
                 }
 
-                // Check username
-                val checkUsernameRaw = SupabaseApi.get("/users?username=eq.$username")
-                val existingUsernames = json.decodeFromString<List<UserProfile>>(checkUsernameRaw)
-                if (existingUsernames.isNotEmpty()) {
-                    return@withContext Result.failure(Exception("Username already taken."))
-                }
-
-                // Create user in Supabase Auth first using the Admin API to get a valid UUID
-                val authRaw = SupabaseApi.createAuthUser(email)
-                val authUser = json.decodeFromString<AuthUserResponse>(authRaw)
-
-                val newUser = UserProfile(
-                    id = authUser.id,
-                    email = email,
-                    username = username,
-                    avatar_emoji = avatarEmoji,
-                    role = "user",
-                    created_at = getIsoString()
-                )
-
-                // Insert into Supabase
-                val userJson = json.encodeToString(newUser)
-                SupabaseApi.post("/users", userJson)
-
-                // Save session
-                prefs.edit().putString("ok_session", json.encodeToString(newUser)).apply()
-                _currentUser.value = newUser
-                fetchUserCheckins(newUser.id)
-                fetchFriendships(newUser.id)
+                prefs.edit().putString("ok_session", json.encodeToString(profile)).apply()
+                _currentUser.value = profile
+                fetchUserCheckins(profile.id)
+                fetchFriendships(profile.id)
                 refreshFeed()
 
-                Result.success(newUser)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-
-    override suspend fun signIn(email: String): Result<UserProfile> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Query by email or username
-                val query = if (email.contains("@")) "email=eq.$email" else "username=eq.$email"
-                val rawJson = SupabaseApi.get("/users?$query")
-                val users = json.decodeFromString<List<UserProfile>>(rawJson)
-                
-                if (users.isEmpty()) {
-                    return@withContext Result.failure(Exception("User not found. Try signing up!"))
-                }
-                
-                val user = users.first()
-                prefs.edit().putString("ok_session", json.encodeToString(user)).apply()
-                _currentUser.value = user
-                fetchUserCheckins(user.id)
-                fetchFriendships(user.id)
-                refreshFeed()
-
-                Result.success(user)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-
-    override suspend fun signInWithPassword(email: String, password: String): Result<UserProfile> {
-        return withContext(Dispatchers.IO) {
-            try {
-                SupabaseApi.signInWithPassword(email, password)
-                val query = "email=eq.$email"
-                val rawJson = SupabaseApi.get("/users?$query")
-                val users = json.decodeFromString<List<UserProfile>>(rawJson)
-                if (users.isEmpty()) {
-                    return@withContext Result.failure(Exception("User profile not found."))
-                }
-                val user = users.first()
-                prefs.edit().putString("ok_session", json.encodeToString(user)).apply()
-                _currentUser.value = user
-                fetchUserCheckins(user.id)
-                fetchFriendships(user.id)
-                refreshFeed()
-                Result.success(user)
+                Result.success(profile)
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -276,10 +294,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
     }
 
     override fun signOut() {
-        prefs.edit().remove("ok_session").apply()
-        _currentUser.value = null
-        _userCheckins.value = emptyList()
-        _friendships.value = emptyList()
+        clearSessionState()
         refreshFeed()
     }
 
@@ -398,27 +413,31 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override fun addComment(postId: String, content: String): Comment? {
+    override suspend fun addComment(postId: String, content: String): Comment? {
         val current = _currentUser.value ?: return null
-        val newComment = Comment(
-            id = "comm-" + UUID.randomUUID().toString().substring(0, 9),
-            post_id = postId,
-            user_id = current.id,
-            username = current.username,
-            avatar_emoji = current.avatar_emoji,
-            content = content,
-            created_at = getIsoString()
-        )
-        val currentPosts = _feedPosts.value.toMutableList()
-        val index = currentPosts.indexOfFirst { it.id == postId }
-        if (index != -1) {
-            val post = currentPosts[index]
-            val updatedComments = post.comments.toMutableList()
-            updatedComments.add(newComment)
-            currentPosts[index] = post.copy(comments = updatedComments)
-            _feedPosts.value = currentPosts
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = mapOf(
+                    "post_id" to postId,
+                    "user_id" to current.id,
+                    "content" to content
+                )
+                SupabaseApi.post("/comments", json.encodeToString(body))
+                refreshFeed()
+                Comment(
+                    id = UUID.randomUUID().toString(),
+                    post_id = postId,
+                    user_id = current.id,
+                    username = current.username,
+                    avatar_emoji = current.avatar_emoji,
+                    content = content,
+                    created_at = getIsoString()
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
         }
-        return newComment
     }
 
     override suspend fun searchUsers(query: String): List<UserProfile> {

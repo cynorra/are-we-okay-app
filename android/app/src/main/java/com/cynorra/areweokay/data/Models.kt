@@ -17,7 +17,6 @@ data class UserProfile(
     val id: String,
     val email: String? = null,
     val username: String,
-    val display_name: String? = null,
     val avatar_emoji: String = "🌙",
     val role: String = "user",
     val created_at: String

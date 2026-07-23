@@ -431,8 +431,9 @@ fun FeedTab() {
                             }
                         },
                         onAddComment = { content ->
-                            val comment = dataRepository.addComment(post.id, content)
-                            comment != null
+                            coroutineScope.launch {
+                                dataRepository.addComment(post.id, content)
+                            }
                         }
                     )
                 }
@@ -445,7 +446,7 @@ fun FeedTab() {
 fun FeedPostCard(
     post: Post,
     onReactionClick: (String) -> Unit,
-    onAddComment: (String) -> Boolean
+    onAddComment: (String) -> Unit
 ) {
     var expandedComments by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
@@ -655,9 +656,8 @@ fun FeedPostCard(
                         keyboardActions = KeyboardActions(
                             onSend = {
                                 if (commentText.isNotEmpty()) {
-                                    if (onAddComment(commentText)) {
-                                        commentText = ""
-                                    }
+                                    onAddComment(commentText)
+                                    commentText = ""
                                 }
                                 focusManager.clearFocus()
                             }
@@ -675,9 +675,8 @@ fun FeedPostCard(
                             .background(OkBlack)
                             .clickable {
                                 if (commentText.isNotEmpty()) {
-                                    if (onAddComment(commentText)) {
-                                        commentText = ""
-                                    }
+                                    onAddComment(commentText)
+                                    commentText = ""
                                 }
                                 focusManager.clearFocus()
                             },

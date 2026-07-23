@@ -18,14 +18,18 @@ data class SupabaseUserResponse(
 )
 
 @Serializable
-data class AuthUserResponse(
-    val id: String
-)
-
-@Serializable
 data class SupabaseReactionResponse(
     val type: String,
     val user_id: String
+)
+
+@Serializable
+data class SupabaseCommentResponse(
+    val id: String,
+    val user_id: String,
+    val content: String,
+    val created_at: String,
+    val users: SupabaseUserResponse? = null
 )
 
 @Serializable
@@ -38,12 +42,42 @@ data class SupabasePostResponse(
     val is_anonymous: Boolean = true,
     val created_at: String,
     val users: SupabaseUserResponse? = null,
-    val reactions: List<SupabaseReactionResponse> = emptyList()
+    val reactions: List<SupabaseReactionResponse> = emptyList(),
+    val comments: List<SupabaseCommentResponse> = emptyList()
+)
+
+@Serializable
+data class AuthSessionUser(
+    val id: String,
+    val email: String? = null
+)
+
+@Serializable
+data class AuthSessionResponse(
+    val access_token: String,
+    val refresh_token: String,
+    val expires_in: Long = 3600,
+    val user: AuthSessionUser
 )
 
 object SupabaseApi {
-    private const val BASE_URL = "https://pmtqntkipmamthoiddtl.supabase.co/rest/v1"
-    private const val API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtdHFudGtpcG1hbXRob2lkZHRsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzM4NTIzOSwiZXhwIjoyMDkyOTYxMjM5fQ._h8st17YkDP3-7o2vhocSASKXppOO_EpgsaR2U0DBd8"
+    private const val SUPABASE_URL = "https://jxdpjeuydrivglwsmrpu.supabase.co"
+    private const val REST_BASE_URL = "$SUPABASE_URL/rest/v1"
+    private const val AUTH_BASE_URL = "$SUPABASE_URL/auth/v1"
+
+    // Public/anon key: safe to ship in the client. It grants no access on its own -
+    // every table is locked down with Row Level Security policies, and per-user access
+    // is only unlocked once a real user access token is set via setSession().
+    private const val ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZHBqZXV5ZHJpdmdsd3NtcnB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3ODMwMDMsImV4cCI6MjEwMDM1OTAwM30.N_nG2OB3lKv-OtYQT497uhrv4g3UQ0qwwQwKEm6wRuQ"
+
+    @Volatile
+    private var accessToken: String? = null
+
+    fun setSession(accessToken: String?) {
+        this.accessToken = accessToken
+    }
+
+    private fun authBearer(): String = accessToken ?: ANON_KEY
 
     val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -58,29 +92,43 @@ object SupabaseApi {
 
     private val mediaType = "application/json; charset=utf-8".toMediaType()
 
-    suspend fun createAuthUser(email: String): String = withContext(Dispatchers.IO) {
-        val authUrl = "https://pmtqntkipmamthoiddtl.supabase.co/auth/v1/admin/users"
-        val bodyJson = """{"email":"$email","password":"okayness123!","email_confirm":true}"""
+    suspend fun signInWithIdToken(idToken: String): String = withContext(Dispatchers.IO) {
+        val bodyJson = """{"provider":"google","id_token":"$idToken"}"""
         val requestBody = bodyJson.toRequestBody(mediaType)
         val request = Request.Builder()
-            .url(authUrl)
+            .url("$AUTH_BASE_URL/token?grant_type=id_token")
             .post(requestBody)
-            .addHeader("apikey", API_KEY)
-            .addHeader("Authorization", "Bearer $API_KEY")
+            .addHeader("apikey", ANON_KEY)
             .addHeader("Content-Type", "application/json")
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Unexpected HTTP code $response")
+            if (!response.isSuccessful) throw IOException("Google girişi başarısız oldu (${response.code}).")
+            response.body?.string() ?: ""
+        }
+    }
+
+    suspend fun refreshSession(refreshToken: String): String = withContext(Dispatchers.IO) {
+        val bodyJson = """{"refresh_token":"$refreshToken"}"""
+        val requestBody = bodyJson.toRequestBody(mediaType)
+        val request = Request.Builder()
+            .url("$AUTH_BASE_URL/token?grant_type=refresh_token")
+            .post(requestBody)
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Oturum yenilenemedi.")
             response.body?.string() ?: ""
         }
     }
 
     suspend fun get(path: String): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
-            .url("$BASE_URL$path")
-            .addHeader("apikey", API_KEY)
-            .addHeader("Authorization", "Bearer $API_KEY")
+            .url("$REST_BASE_URL$path")
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer ${authBearer()}")
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -92,10 +140,10 @@ object SupabaseApi {
     suspend fun post(path: String, bodyJson: String): String = withContext(Dispatchers.IO) {
         val requestBody = bodyJson.toRequestBody(mediaType)
         val request = Request.Builder()
-            .url("$BASE_URL$path")
+            .url("$REST_BASE_URL$path")
             .post(requestBody)
-            .addHeader("apikey", API_KEY)
-            .addHeader("Authorization", "Bearer $API_KEY")
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer ${authBearer()}")
             .addHeader("Content-Type", "application/json")
             .addHeader("Prefer", "return=representation")
             .build()
@@ -109,10 +157,10 @@ object SupabaseApi {
     suspend fun patch(path: String, bodyJson: String): String = withContext(Dispatchers.IO) {
         val requestBody = bodyJson.toRequestBody(mediaType)
         val request = Request.Builder()
-            .url("$BASE_URL$path")
+            .url("$REST_BASE_URL$path")
             .patch(requestBody)
-            .addHeader("apikey", API_KEY)
-            .addHeader("Authorization", "Bearer $API_KEY")
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer ${authBearer()}")
             .addHeader("Content-Type", "application/json")
             .build()
 
@@ -124,10 +172,10 @@ object SupabaseApi {
 
     suspend fun delete(path: String): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
-            .url("$BASE_URL$path")
+            .url("$REST_BASE_URL$path")
             .delete()
-            .addHeader("apikey", API_KEY)
-            .addHeader("Authorization", "Bearer $API_KEY")
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer ${authBearer()}")
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -135,22 +183,4 @@ object SupabaseApi {
             response.body?.string() ?: ""
         }
     }
-
-    suspend fun signInWithPassword(email: String, password: String): String = withContext(Dispatchers.IO) {
-        val authUrl = "https://pmtqntkipmamthoiddtl.supabase.co/auth/v1/token?grant_type=password"
-        val bodyJson = """{"email":"$email","password":"$password"}"""
-        val requestBody = bodyJson.toRequestBody(mediaType)
-        val request = Request.Builder()
-            .url(authUrl)
-            .post(requestBody)
-            .addHeader("apikey", API_KEY)
-            .addHeader("Content-Type", "application/json")
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Geçersiz e-posta veya şifre.")
-            response.body?.string() ?: ""
-        }
-    }
 }
-
