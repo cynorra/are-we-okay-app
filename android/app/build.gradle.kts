@@ -120,4 +120,7 @@ dependencies {
 
   // AdMob
   implementation(libs.play.services.ads)
+  // Override the old WorkManager version AdMob pulls in transitively (2.7.0),
+  // which is missing R8 keep rules that get stripped by shrinking below.
+  implementation(libs.androidx.work.runtime)
 }
