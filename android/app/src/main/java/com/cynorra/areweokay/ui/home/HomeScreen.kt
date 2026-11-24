@@ -1469,6 +1469,9 @@ fun SettingsTab(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+                SocialHandlesEditor()
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
@@ -1603,4 +1606,37 @@ private fun AccountTypeDialog(onPsychologist: () -> Unit) {
         confirmButton = { TextButton(onClick = { choose(false) }) { Text(stringResource(R.string.acct_me), color = OkOrange, fontWeight = FontWeight.Bold) } },
         dismissButton = { TextButton(onClick = { choose(true) }) { Text(stringResource(R.string.acct_psy), color = OkTeal, fontWeight = FontWeight.Bold) } }
     )
+}
+
+// Optional social handles. Stored on the device and synced best-effort once the
+// users table has the columns (supabase/p2_social_handles.sql).
+@Composable
+private fun SocialHandlesEditor() {
+    val ctx = LocalContext.current
+    val prefs = remember { ctx.getSharedPreferences("ok_ui", android.content.Context.MODE_PRIVATE) }
+    val scope = rememberCoroutineScope()
+    val repo = LocalDataRepository.current
+    val keys = listOf("instagram" to R.string.social_instagram, "tiktok" to R.string.social_tiktok, "x_handle" to R.string.social_x, "website" to R.string.social_website)
+    val values = remember { androidx.compose.runtime.mutableStateMapOf<String, String>().also { m -> keys.forEach { (k, _) -> m[k] = prefs.getString("social_$k", "") ?: "" } } }
+    Text(stringResource(R.string.social_title), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = OkBlack)
+    Spacer(Modifier.height(6.dp))
+    keys.forEach { (k, label) ->
+        androidx.compose.material3.OutlinedTextField(
+            value = values[k] ?: "",
+            onValueChange = { v ->
+                val clean = v.trim().take(60).filter { it.isLetterOrDigit() || it in "._-:/@" }
+                values[k] = clean
+                prefs.edit().putString("social_$k", clean).apply()
+                val uid = repo.getCurrentUserSync()?.id
+                if (uid != null) scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching {
+                        com.cynorra.areweokay.data.SupabaseApi.patch("/users?id=eq.$uid", "{\"$k\":\"$clean\"}")
+                    }
+                }
+            },
+            label = { Text(stringResource(label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+        )
+    }
 }
