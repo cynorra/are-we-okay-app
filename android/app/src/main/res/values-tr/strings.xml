@@ -383,4 +383,9 @@
     <string name="social_tiktok">TikTok</string>
     <string name="social_x">X (Twitter)</string>
     <string name="social_website">Web sitesi</string>
+    <string name="feed_filter_all">Tümü</string>
+    <string name="feed_filter_good">İyi olanlar</string>
+    <string name="feed_filter_bad">Zorlananlar</string>
+    <string name="feed_filter_unsure">Emin olmayanlar</string>
+    <string name="feed_filter_psy">Psikologlar</string>
 </resources>

@@ -403,4 +403,9 @@
     <string name="social_tiktok">TikTok</string>
     <string name="social_x">X (Twitter)</string>
     <string name="social_website">Website</string>
+    <string name="feed_filter_all">All</string>
+    <string name="feed_filter_good">Doing well</string>
+    <string name="feed_filter_bad">Struggling</string>
+    <string name="feed_filter_unsure">Not sure</string>
+    <string name="feed_filter_psy">Psychologists</string>
 </resources>

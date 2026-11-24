@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -468,8 +469,17 @@ private val emotionRes = mapOf(
 @Composable
 fun FeedTab() {
     val dataRepository = LocalDataRepository.current
-    val posts by dataRepository.feedPosts.collectAsState()
+    val allPosts by dataRepository.feedPosts.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    // 0 all, 1 good, 2 bad, 3 unsure, 4 psychologists
+    var filter by remember { mutableStateOf(0) }
+    val posts = when (filter) {
+        1 -> allPosts.filter { it.mood == MoodState.good }
+        2 -> allPosts.filter { it.mood == MoodState.bad }
+        3 -> allPosts.filter { it.mood == MoodState.unsure }
+        4 -> allPosts.filter { it.verifiedPsychologist }
+        else -> allPosts
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -485,6 +495,21 @@ fun FeedTab() {
                 fontWeight = FontWeight.ExtraBold,
                 color = OkBlack
             )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                R.string.feed_filter_all, R.string.feed_filter_good, R.string.feed_filter_bad,
+                R.string.feed_filter_unsure, R.string.feed_filter_psy
+            ).forEachIndexed { i, res ->
+                androidx.compose.material3.FilterChip(
+                    selected = filter == i,
+                    onClick = { filter = i },
+                    label = { Text(stringResource(res), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                )
+            }
         }
 
         if (posts.isEmpty()) {
