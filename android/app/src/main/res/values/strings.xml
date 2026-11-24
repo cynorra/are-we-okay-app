@@ -392,7 +392,7 @@
         <item>Tomorrow is a new page, and today was a chapter you got through.</item>
         <item>Checking in on yourself is a quiet act of care.</item>
     </string-array>
-    <string name="motivation_title">Today's note for you</string>
+    <string name="motivation_title">Today\'s note for you</string>
     <string name="motivation_share">Share</string>
     <string name="acct_title">Who is this account for?</string>
     <string name="acct_desc">Choose how you will use the app. You can change this later.</string>
