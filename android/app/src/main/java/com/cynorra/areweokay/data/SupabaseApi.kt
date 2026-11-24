@@ -47,6 +47,9 @@ data class SupabasePostResponse(
 )
 
 @Serializable
+data class BlockRow(val blocked_id: String)
+
+@Serializable
 data class AuthSessionUser(
     val id: String,
     val email: String? = null
@@ -61,14 +64,14 @@ data class AuthSessionResponse(
 )
 
 object SupabaseApi {
-    private const val SUPABASE_URL = "https://jxdpjeuydrivglwsmrpu.supabase.co"
+    private const val SUPABASE_URL = "https://jnkpeuttglghtegrvabg.supabase.co"
     private const val REST_BASE_URL = "$SUPABASE_URL/rest/v1"
     private const val AUTH_BASE_URL = "$SUPABASE_URL/auth/v1"
 
     // Public/anon key: safe to ship in the client. It grants no access on its own -
     // every table is locked down with Row Level Security policies, and per-user access
     // is only unlocked once a real user access token is set via setSession().
-    private const val ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZHBqZXV5ZHJpdmdsd3NtcnB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3ODMwMDMsImV4cCI6MjEwMDM1OTAwM30.N_nG2OB3lKv-OtYQT497uhrv4g3UQ0qwwQwKEm6wRuQ"
+    private const val ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impua3BldXR0Z2xnaHRlZ3J2YWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0NDk5MDcsImV4cCI6MjExMTAyNTkwN30.Jt1Lde-ZTDGtbRBUapFvxBKzFVHYiVYFHWEMe8Aheio"
 
     @Volatile
     private var accessToken: String? = null
@@ -103,7 +106,7 @@ object SupabaseApi {
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Google girişi başarısız oldu (${response.code}).")
+            if (!response.isSuccessful) throw IOException("Google sign-in failed (${response.code}).")
             response.body?.string() ?: ""
         }
     }
@@ -181,6 +184,38 @@ object SupabaseApi {
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Unexpected HTTP code $response")
             response.body?.string() ?: ""
+        }
+    }
+
+    // ---- P1 helpers (psychologist platform) ----
+    val realtimeUrl: String get() = "wss://${SUPABASE_URL.removePrefix("https://")}/realtime/v1/websocket?apikey=$ANON_KEY&vsn=1.0.0"
+    fun currentAccessToken(): String = authBearer()
+
+    /** POST /rest/v1/rpc/<fn>; returns the raw JSON body. */
+    suspend fun rpc(fn: String, bodyJson: String = "{}"): String = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$REST_BASE_URL/rpc/$fn")
+            .post(bodyJson.toRequestBody(mediaType))
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer ${authBearer()}")
+            .addHeader("Content-Type", "application/json")
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("RPC $fn failed (${response.code})")
+            response.body?.string() ?: ""
+        }
+    }
+
+    /** Uploads bytes to a PRIVATE storage bucket (policies restrict the folder to the user's own id). */
+    suspend fun uploadObject(bucket: String, path: String, bytes: ByteArray, contentType: String) = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$SUPABASE_URL/storage/v1/object/$bucket/$path")
+            .post(bytes.toRequestBody(contentType.toMediaType()))
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer ${authBearer()}")
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Upload failed (${response.code})")
         }
     }
 }

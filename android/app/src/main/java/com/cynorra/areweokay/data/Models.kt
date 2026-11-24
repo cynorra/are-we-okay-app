@@ -29,8 +29,33 @@ data class Checkin(
     val mood: MoodState,
     val note: String? = null,
     val is_public: Boolean = true,
-    val created_at: String
-)
+    val created_at: String,
+    // Mood v2 (nullable: rows written by older builds only have `mood`).
+    val mood_level: Int? = null,
+    val emotions: List<String> = emptyList()
+) {
+    /** 1..5 level; legacy rows are mapped good->4, unsure->3, bad->1. */
+    val level: Int get() = mood_level ?: MoodScale.fromLegacy(mood)
+}
+
+/** Mood v2 helpers. Legacy 3-state [MoodState] stays in the DB/feed for backward compatibility. */
+object MoodScale {
+    val emojis = listOf("😞", "😔", "😐", "🙂", "😄") // index = level - 1
+    val emotionKeys = listOf(
+        "calm", "happy", "grateful", "hopeful", "energetic",
+        "tired", "anxious", "stressed", "sad", "lonely", "angry", "overwhelmed"
+    )
+    fun fromLegacy(m: MoodState): Int = when (m) {
+        MoodState.good -> 4
+        MoodState.unsure -> 3
+        MoodState.bad -> 1
+    }
+    fun toLegacy(level: Int): MoodState = when {
+        level >= 4 -> MoodState.good
+        level <= 2 -> MoodState.bad
+        else -> MoodState.unsure
+    }
+}
 
 @Serializable
 data class Comment(
@@ -64,7 +89,8 @@ data class Post(
     val created_at: String,
     val reactions: ReactionCounts = ReactionCounts(),
     val userReactions: List<String> = emptyList(), // Store strings representing ReactionType enum
-    val comments: List<Comment> = emptyList()
+    val comments: List<Comment> = emptyList(),
+    val verifiedPsychologist: Boolean = false // author is a verified psychologist (shows the badge)
 )
 
 @Serializable

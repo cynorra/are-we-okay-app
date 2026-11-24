@@ -14,8 +14,8 @@ android {
         applicationId = "com.cynorra.areweokay"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     signingConfigs {
@@ -46,6 +46,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true // java.time on minSdk 24 (psychologist availability / time zones)
     }
     buildFeatures {
       compose = true
@@ -123,4 +124,8 @@ dependencies {
   // Override the old WorkManager version AdMob pulls in transitively (2.7.0),
   // which is missing R8 keep rules that get stripped by shrinking below.
   implementation(libs.androidx.work.runtime)
+
+  // java.time desugaring + QR code for shareable psychologist profile links
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+  implementation("com.google.zxing:core:3.5.3")
 }

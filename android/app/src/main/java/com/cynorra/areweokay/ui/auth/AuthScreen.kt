@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -136,7 +137,7 @@ fun GoogleSignInButton(
             GoogleIcon(modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Google ile Devam Et",
+                text = stringResource(R.string.auth_continue_google),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = OkBlack
@@ -166,7 +167,7 @@ fun AuthScreen(
             try {
                 val clientId = context.getString(R.string.google_web_client_id)
                 if (clientId.isBlank() || clientId.startsWith("your_google_web_client_id")) {
-                    errorMessage = "Lütfen strings.xml dosyasında geçerli bir Google Web Client ID tanımlayın."
+                    errorMessage = context.getString(R.string.auth_err_client_id)
                     return@launch
                 }
                 
@@ -192,33 +193,23 @@ fun AuthScreen(
                     val userProfile = signInResult.getOrNull()
 
                     if (userProfile != null) {
-                        // Automatically create public checkin if mood button was clicked
-                        selectedMood?.let { moodKey ->
-                            val moodState = when (moodKey) {
-                                "good" -> com.cynorra.areweokay.data.MoodState.good
-                                "bad" -> com.cynorra.areweokay.data.MoodState.bad
-                                else -> com.cynorra.areweokay.data.MoodState.unsure
-                            }
-                            dataRepository.createCheckin(
-                                mood = moodState,
-                                note = "",
-                                isPublic = true
-                            )
-                        }
+                        // Mood chosen on the welcome screen is kept until consent is given
+                        // Stored only; the check-in is created after the explicit-consent screen (see Navigation).
+                        selectedMood?.let { moodKey -> dataRepository.local.pendingMood = moodKey }
                         onAuthSuccess()
                     } else {
                         errorMessage = signInResult.exceptionOrNull()?.localizedMessage
-                            ?: "Kullanıcı profil kaydı oluşturulamadı."
+                            ?: context.getString(R.string.auth_err_profile)
                     }
                 } else {
-                    errorMessage = "Geçersiz kimlik bilgisi türü alındı."
+                    errorMessage = context.getString(R.string.auth_err_credential)
                 }
             } catch (e: GetCredentialCancellationException) {
                 // User cancelled, do nothing
             } catch (e: GetCredentialException) {
-                errorMessage = "Google girişi başarısız oldu: ${e.localizedMessage}"
+                errorMessage = context.getString(R.string.auth_err_google_failed, e.localizedMessage ?: "")
             } catch (e: Exception) {
-                errorMessage = "Beklenmeyen hata: ${e.localizedMessage}"
+                errorMessage = context.getString(R.string.auth_err_unexpected, e.localizedMessage ?: "")
             }
         }
     }
@@ -270,7 +261,7 @@ fun AuthScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "İyi Miyiz?",
+                text = stringResource(R.string.auth_tagline_title),
                 fontSize = 44.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = OkBlack,
@@ -279,7 +270,7 @@ fun AuthScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Global bir iyilik hareketi. Her gün check-in yap, nasıl hissettiğini anonim paylaş ve yargılanmadan destek bul.",
+                text = stringResource(R.string.auth_tagline_body),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Medium,
                 color = OkMuted,
@@ -302,7 +293,7 @@ fun AuthScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Günün nasıl geçiyor?",
+                        text = stringResource(R.string.auth_how_is_day),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = OkBlack
@@ -311,9 +302,9 @@ fun AuthScreen(
 
                     // Mood Buttons (directly triggers Google Sign-in on click)
                     val moodButtons = listOf(
-                        Triple("good", "😎", "İyiyiz"),
-                        Triple("bad", "😔", "İyi Değiliz"),
-                        Triple("unsure", "🤔", "Emin Değilim")
+                        Triple("good", "😎", stringResource(R.string.mood_we_are_good)),
+                        Triple("bad", "😔", stringResource(R.string.mood_we_are_not)),
+                        Triple("unsure", "🤔", stringResource(R.string.mood_not_sure))
                     )
 
                     moodButtons.forEach { (moodKey, emoji, label) ->
@@ -362,7 +353,7 @@ fun AuthScreen(
             
             // Footer Text
             Text(
-                text = "Birlikte daha iyiyiz. ❤️",
+                text = stringResource(R.string.auth_footer),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = OkOrangeShade
@@ -386,7 +377,7 @@ fun AuthScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Giriş Hatası",
+                            text = stringResource(R.string.auth_error_title),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = OkBlack
@@ -404,7 +395,7 @@ fun AuthScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = OkOrange),
                             shape = RoundedCornerShape(20.dp)
                         ) {
-                            Text(text = "Kapat", color = Color.White)
+                            Text(text = stringResource(R.string.close), color = Color.White)
                         }
                     }
                 }

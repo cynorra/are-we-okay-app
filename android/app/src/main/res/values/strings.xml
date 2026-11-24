@@ -2,4 +2,400 @@
     <string name="app_name">Are We Okay</string>
     <!-- Configure Google OAuth Web Client ID here. You can get this from Google Cloud Console under credentials -->
     <string name="google_web_client_id">516438111550-r3q56k11apfbh00gh7t8us2mtr72lcmi.apps.googleusercontent.com</string>
+
+    <!-- TODO(owner): set the real domains. invite_host must serve /.well-known/assetlinks.json for App Link verification. -->
+    <string name="invite_host" translatable="false">iyimiyiz.com</string>
+    <string name="privacy_policy_url" translatable="false">https://iyimiyiz.com/privacy</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="delete">Delete</string>
+    <string name="help_button">Help</string>
+    <string name="disclaimer_short">Are We Okay is a self-reflection and peer-support tool. It is not medical advice, diagnosis or treatment, and not a substitute for a professional.</string>
+
+    <!-- Consent -->
+    <string name="consent_title">Before we begin</string>
+    <string name="consent_body">Your mood check-ins, emotion labels and notes are health-related personal data. To store them we need your explicit consent. Data you share publicly is shown anonymously. Your journal stays only on your device, encrypted.</string>
+    <string name="consent_rights">You can withdraw consent and delete your account and all data at any time from Settings. Your data is processed to run the app only; it is not sold.</string>
+    <string name="consent_privacy_link">Read the Privacy Policy</string>
+    <string name="consent_check_health">I explicitly consent to the processing of my mood and wellbeing data as described.</string>
+    <string name="consent_check_age">I confirm that I am at least 16 years old.</string>
+    <string name="consent_accept">Accept and continue</string>
+    <string name="consent_decline">Decline and sign out</string>
+
+    <!-- Mood v2 -->
+    <string name="mood_1">Very low</string>
+    <string name="mood_2">Low</string>
+    <string name="mood_3">Okay</string>
+    <string name="mood_4">Good</string>
+    <string name="mood_5">Great</string>
+    <string name="emotions_prompt">What are you feeling? (optional)</string>
+    <string name="emo_calm">Calm</string>
+    <string name="emo_happy">Happy</string>
+    <string name="emo_grateful">Grateful</string>
+    <string name="emo_hopeful">Hopeful</string>
+    <string name="emo_energetic">Energetic</string>
+    <string name="emo_tired">Tired</string>
+    <string name="emo_anxious">Anxious</string>
+    <string name="emo_stressed">Stressed</string>
+    <string name="emo_sad">Sad</string>
+    <string name="emo_lonely">Lonely</string>
+    <string name="emo_angry">Angry</string>
+    <string name="emo_overwhelmed">Overwhelmed</string>
+
+    <!-- Streak / badges -->
+    <string name="streak_days">%1$d-day streak</string>
+    <string name="badges_title">Badges</string>
+    <string name="badge_first">First check-in</string>
+    <string name="badge_s3">3-day streak</string>
+    <string name="badge_s7">7-day streak</string>
+    <string name="badge_s14">14-day streak</string>
+    <string name="badge_s30">30-day streak</string>
+    <string name="badge_j1">First journal entry</string>
+    <string name="badge_j10">10 journal entries</string>
+    <string name="badge_b1">First breathing session</string>
+
+    <!-- Reminder -->
+    <string name="reminder_channel">Daily check-in reminder</string>
+    <string name="reminder_title">Gentle daily reminder</string>
+    <string name="reminder_desc">One soft nudge a day, only if you have not checked in.</string>
+    <string name="reminder_text_1">How are you feeling today? A quick check-in is here whenever you want it.</string>
+    <string name="reminder_text_2">Take a moment for yourself. How is your day going?</string>
+    <string name="reminder_text_3">No pressure. Just checking in on you.</string>
+
+    <!-- Breathing -->
+    <string name="breath_title">Breathing</string>
+    <string name="breath_intro">Slow breathing can help you settle. Pick a technique and follow the circle.</string>
+    <string name="breath_box">Box</string>
+    <string name="breath_box_desc">4-4-4-4: inhale, hold, exhale, hold. Steady and grounding.</string>
+    <string name="breath_478">4-7-8</string>
+    <string name="breath_478_desc">Inhale 4, hold 7, exhale 8. Good for winding down.</string>
+    <string name="breath_calm">Calm</string>
+    <string name="breath_calm_desc">Inhale 4, exhale 6. A simple way to slow down.</string>
+    <string name="breath_ready">Ready</string>
+    <string name="breath_in">Breathe in</string>
+    <string name="breath_hold">Hold</string>
+    <string name="breath_out">Breathe out</string>
+    <string name="breath_start">Start</string>
+    <string name="breath_stop">Stop</string>
+    <string name="breath_cycles">Cycles: %1$d</string>
+
+    <!-- Journal -->
+    <string name="journal_title">Journal</string>
+    <string name="journal_private">Private: stored encrypted on this device only. It is never uploaded.</string>
+    <string name="journal_new">New entry</string>
+    <string name="journal_save">Save</string>
+    <string name="journal_empty">No entries yet. Writing a few lines can help clear your mind.</string>
+    <string name="journal_t_free">Free write</string>
+    <string name="journal_t_gratitude">Gratitude</string>
+    <string name="journal_t_thought">Thoughts</string>
+    <string name="journal_t_tomorrow">Tomorrow</string>
+    <string name="journal_h_free">Write whatever is on your mind...</string>
+    <string name="journal_h_gratitude">Three things I am grateful for today:\n1.\n2.\n3.</string>
+    <string name="journal_h_thought">What happened?\nWhat did I feel and think?\nWhat would I say to a friend in this situation?</string>
+    <string name="journal_h_tomorrow">One small thing I want to do tomorrow:</string>
+
+    <!-- Crisis / help -->
+    <string name="crisis_title">Get help now</string>
+    <string name="crisis_intro">If you are struggling or thinking about harming yourself, you are not alone and help is available. Reaching out is a strong thing to do.</string>
+    <string name="crisis_emergency">In immediate danger?</string>
+    <string name="crisis_emergency_body">Call your local emergency number right away, or go to the nearest emergency room.</string>
+    <string name="crisis_lines_for">Support lines for your region (%1$s)</string>
+    <string name="crisis_no_lines">We do not have a verified line for your region yet.</string>
+    <string name="crisis_find_more">Find a helpline in any country</string>
+    <string name="crisis_verify">Numbers can change and may be free only in some regions. Please verify locally.</string>
+    <string name="crisis_now">Right now</string>
+    <string name="crisis_grounding">Look around and name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell and 1 you can taste. If you can, tell someone you trust how you feel.</string>
+    <string name="crisis_breathe">Try a breathing exercise</string>
+
+    <!-- Share / invite -->
+    <string name="share_mood_card">Share mood card</string>
+    <string name="share_chooser">Share via</string>
+    <string name="card_today">Today I am feeling</string>
+    <string name="card_streak">%1$d-day streak</string>
+    <string name="card_cta">Are we okay? Check in with me.</string>
+    <string name="share_text">Checking in with myself on Are We Okay. Join me: %1$s</string>
+    <string name="invite_text">I use Are We Okay for a daily mood check-in. Come check in with me: %1$s</string>
+    <string name="invite_friends">Invite friends</string>
+
+    <!-- Account deletion -->
+    <string name="delete_account">Delete my account</string>
+    <string name="delete_account_body">This permanently deletes your account, check-ins, posts, comments, friendships and everything stored on this device, including your journal. This cannot be undone.</string>
+    <string name="delete_account_confirm">Delete everything</string>
+    <string name="delete_failed">Could not delete the account. Check your connection and try again.</string>
+
+    <!-- Moderation -->
+    <string name="report_title">Report or block</string>
+    <string name="report_spam">Spam</string>
+    <string name="report_harassment">Harassment or hate</string>
+    <string name="report_self_harm">Self-harm concern</string>
+    <string name="report_other">Something else</string>
+    <string name="report_thanks">Thank you. Our team will review it.</string>
+    <string name="block_user">Block this user</string>
+    <string name="block_done">User blocked. Their posts are hidden.</string>
+
+    <!-- P1: psychologist platform -->
+    <!-- Jitsi base URL. The public server is NOT adequate for special-category health data: self-host or use a BAA-covered provider. -->
+    <string name="video_base_url" translatable="false">https://meet.jit.si</string>
+    <string name="psy_entry">Therapists</string>
+    <string name="psy_back">Back</string>
+    <string name="psy_verified">Verified</string>
+    <string name="psy_all">All</string>
+    <string name="psy_loading">Loading...</string>
+    <string name="psy_error_generic">Something went wrong. Please try again.</string>
+    <string name="psy_error_load">Could not load the list. Check your connection.</string>
+    <string name="psy_not_found">This profile is not available.</string>
+    <string name="psy_save">Save</string>
+    <string name="psy_saved">Saved</string>
+    <string name="psy_send">Send</string>
+    <string name="psy_submit">Submit</string>
+    <string name="psy_report">Report</string>
+    <string name="psy_reported">Thanks, we will review this report.</string>
+    <string name="psy_disclaimer">Psychologists listed here are independent professionals. This app does not diagnose, treat or promise any outcome, and it is not for emergencies. In a crisis use the Help button.</string>
+    <string name="psy_dir_title">Find a psychologist</string>
+    <string name="psy_search_hint">Search name, topic, city</string>
+    <string name="psy_filter_spec">Specialty</string>
+    <string name="psy_filter_mode">Format</string>
+    <string name="psy_filter_lang">Language</string>
+    <string name="psy_filter_country">Country</string>
+    <string name="psy_filter_price">Max price per session</string>
+    <string name="psy_dir_empty">No verified psychologists match your filters yet.</string>
+    <string name="psy_online">Online</string>
+    <string name="psy_in_person">In person</string>
+    <string name="psy_favorites">Favorites</string>
+    <string name="psy_favorite">Favorite</string>
+    <string name="psy_follow">Follow</string>
+    <string name="psy_unfollow">Following</string>
+    <string name="psy_followers">%1$d followers</string>
+    <string name="psy_share_profile">Share profile / QR</string>
+    <string name="psy_my_appts">Appointments</string>
+    <string name="psy_messages">Messages</string>
+    <string name="psy_panel">I am a psychologist</string>
+    <string name="psy_price_ask">Price on request</string>
+    <string name="psy_price_fmt">%1$s %2$s per %3$d min</string>
+    <string name="psy_price_info">Price is shown for information only. This app does not process payments; any payment is arranged directly with the psychologist.</string>
+    <string name="psy_book">Book a session</string>
+    <string name="psy_send_message">Message</string>
+    <string name="psy_reviews">Reviews</string>
+    <string name="psy_leave_review">Rate your completed session</string>
+    <string name="psy_review_hint">Your experience (optional)</string>
+    <string name="psy_review_rule">Only people who completed a session can leave a review.</string>
+    <string name="psy_no_reviews">No reviews yet.</string>
+    <string name="psy_tz_note">Times are shown in your time zone (%1$s). The psychologist works in %2$s.</string>
+    <string name="psy_no_slots">No free slots in the next two weeks.</string>
+    <string name="psy_note_hint">Short note for the psychologist (optional, no emergencies)</string>
+    <string name="psy_cancel_rules">Cancellation: you can cancel for free until 24 hours before the session. Later cancellations are marked as late cancellations on the appointment.</string>
+    <string name="psy_booking_ack">I understand this is a request that the psychologist must confirm, and that this is not emergency care.</string>
+    <string name="psy_request">Send request</string>
+    <string name="psy_slot_taken">This slot is no longer available. Please pick another.</string>
+    <string name="psy_no_appts">No appointments yet.</string>
+    <string name="psy_client">Client</string>
+    <string name="psy_status_label">Status</string>
+    <string name="psy_proposed">New time proposed</string>
+    <string name="psy_late_cancel">Late cancellation (less than 24 h before start).</string>
+    <string name="psy_confirm">Confirm</string>
+    <string name="psy_decline">Decline</string>
+    <string name="psy_propose">Propose other time</string>
+    <string name="psy_accept_proposal">Accept new time</string>
+    <string name="psy_join">Join video session</string>
+    <string name="psy_join_window">The session room opens 10 minutes before the start time.</string>
+    <string name="psy_complete">Mark completed</string>
+    <string name="psy_cancel_appt">Cancel</string>
+    <string name="psy_cancel_late_warn">This session starts in less than 24 hours. Cancelling now is recorded as a late cancellation.</string>
+    <string name="psy_st_requested">Requested</string>
+    <string name="psy_st_confirmed">Confirmed</string>
+    <string name="psy_st_declined">Declined</string>
+    <string name="psy_st_proposed">New time proposed</string>
+    <string name="psy_st_cancelled">Cancelled</string>
+    <string name="psy_st_completed">Completed</string>
+    <string name="psy_chat_privacy">Messages are sent over an encrypted connection and stored encrypted at rest, and only you and this person can read them. They are not end-to-end encrypted. Never use chat for emergencies.</string>
+    <string name="psy_no_messages">No conversations yet.</string>
+    <string name="psy_type_message">Write a message</string>
+    <string name="psy_share_title">Share with my psychologist</string>
+    <string name="psy_share_intro">You decide what is shared, for how long, and with whom. You can stop sharing at any time, which also deletes the shared copy. Every view is logged and you can see the log.</string>
+    <string name="psy_share_none">You can share only with a psychologist you have booked or messaged.</string>
+    <string name="psy_share_what">What to share</string>
+    <string name="psy_scope_mood">Mood levels (30 days)</string>
+    <string name="psy_scope_emotions">Emotion labels</string>
+    <string name="psy_scope_journal">Journal entries</string>
+    <string name="psy_share_journal_pick">Tick the entries to include:</string>
+    <string name="psy_share_for">Share for</string>
+    <string name="psy_days">%1$d days</string>
+    <string name="psy_share_consent">I explicitly consent to share the selected health-related data with this psychologist until the chosen end date. I can revoke at any time.</string>
+    <string name="psy_share_start">Start sharing</string>
+    <string name="psy_share_done">Shared data updated.</string>
+    <string name="psy_share_active">Active shares</string>
+    <string name="psy_share_until">Until %1$s</string>
+    <string name="psy_share_refresh">Update data</string>
+    <string name="psy_share_log">Access log</string>
+    <string name="psy_share_revoke">Stop sharing</string>
+    <string name="psy_share_noactive">You are not sharing anything right now.</string>
+    <string name="psy_join_title">Join as a psychologist</string>
+    <string name="psy_join_cta">Create professional profile</string>
+    <string name="psy_onboard_title">Professional profile</string>
+    <string name="psy_onboard_intro">Create your profile and upload your licence or diploma. Your profile becomes visible to the public only after manual verification by our team.</string>
+    <string name="psy_f_name">Display name</string>
+    <string name="psy_f_title">Title (e.g. Clinical Psychologist)</string>
+    <string name="psy_f_bio">About you</string>
+    <string name="psy_f_specs">Specialties</string>
+    <string name="psy_f_langs">Languages</string>
+    <string name="psy_f_country">Country (ISO)</string>
+    <string name="psy_f_city">City</string>
+    <string name="psy_f_tz">Time zone (e.g. Europe/Istanbul)</string>
+    <string name="psy_f_minutes">Minutes</string>
+    <string name="psy_f_price">Price</string>
+    <string name="psy_f_currency">Cur.</string>
+    <string name="psy_tz_bad">Unknown time zone.</string>
+    <string name="psy_doc_title">Licence / diploma</string>
+    <string name="psy_doc_desc">Upload a photo or PDF (max 8 MB). Only our verification team can see it and it is deleted after review.</string>
+    <string name="psy_doc_count">Uploaded documents: %1$d</string>
+    <string name="psy_doc_upload">Upload document</string>
+    <string name="psy_doc_ok">Document uploaded.</string>
+    <string name="psy_doc_bad">Please choose an image or PDF up to 8 MB.</string>
+    <string name="psy_pro_ack">I am 18+, hold the qualification I state, will not promise diagnosis, cure or outcomes, will not share client information in public posts, and I accept the community and privacy rules.</string>
+    <string name="psy_save_submit">Save and submit for verification</string>
+    <string name="psy_vs_pending">Verification pending. Your profile is not visible in the directory yet.</string>
+    <string name="psy_vs_rejected">Verification was not approved. Update your profile and documents and contact support.</string>
+    <string name="psy_hidden_until_verified">Appointments, messages and content tools unlock after verification.</string>
+    <string name="psy_edit_profile">Edit profile and documents</string>
+    <string name="psy_availability">Weekly availability</string>
+    <string name="psy_avail_tz">Hours are in your profile time zone: %1$s</string>
+    <string name="psy_avail_add">add hours</string>
+    <string name="psy_avail_start">From</string>
+    <string name="psy_avail_end">Until</string>
+    <string name="psy_avail_bad">End time must be after start time.</string>
+    <string name="psy_clients">Clients</string>
+    <string name="psy_no_clients">No clients yet.</string>
+    <string name="psy_sessions_n">%1$d sessions</string>
+    <string name="psy_next">Next</string>
+    <string name="psy_shared_data">Shared by client</string>
+    <string name="psy_no_shared">This client has not shared mood data with you.</string>
+    <string name="psy_shared_note">The client chose to share this data for a limited time. Viewing is logged. Do not copy it outside the app.</string>
+    <string name="psy_view_shared">View shared data</string>
+    <string name="psy_share_expired">The share has expired or was revoked.</string>
+    <string name="psy_mood_avg">Average mood %1$.1f/5 across %2$d check-ins</string>
+    <string name="psy_notes">Session notes</string>
+    <string name="psy_notes_private">Only you can see these notes. The client cannot.</string>
+    <string name="psy_note_new">New note</string>
+    <string name="psy_post_title">Share content</string>
+    <string name="psy_post_intro">Short tips or articles appear in the community feed with your Verified badge. General information only.</string>
+    <string name="psy_kind_tip">Tip</string>
+    <string name="psy_kind_article">Article</string>
+    <string name="psy_kind_post">Post</string>
+    <string name="psy_post_body">Text (min 20 characters)</string>
+    <string name="psy_post_tags">Tags (comma separated)</string>
+    <string name="psy_post_ack">This is general educational information, not individual advice, diagnosis or treatment, and contains no client information.</string>
+    <string name="psy_publish">Publish</string>
+    <string name="psy_published">Published.</string>
+    <string name="psy_notif_channel">Appointment reminders</string>
+    <string name="psy_notif_text">You have a session starting soon.</string>
+    <string name="psy_spec_anxiety">Anxiety</string>
+    <string name="psy_spec_depression">Low mood</string>
+    <string name="psy_spec_trauma">Trauma</string>
+    <string name="psy_spec_relationships">Relationships</string>
+    <string name="psy_spec_stress">Stress</string>
+    <string name="psy_spec_grief">Grief</string>
+    <string name="psy_spec_addiction">Addiction</string>
+    <string name="psy_spec_adhd">ADHD</string>
+    <string name="psy_spec_eating">Eating concerns</string>
+    <string name="psy_spec_sleep">Sleep</string>
+    <string name="psy_spec_youth">Children and teens</string>
+    <string name="psy_spec_couples">Couples</string>
+    <string name="psy_spec_career">Career</string>
+
+    <!-- UI strings moved out of Compose code -->
+    <string name="auth_continue_google">Continue with Google</string>
+    <string name="auth_tagline_title">Are we okay?</string>
+    <string name="auth_tagline_body">A global movement of kindness. Check in every day, share how you feel anonymously and find support without judgment.</string>
+    <string name="auth_how_is_day">How is your day going?</string>
+    <string name="mood_we_are_good">We\'re okay</string>
+    <string name="mood_we_are_not">We\'re not okay</string>
+    <string name="mood_not_sure">Not sure</string>
+    <string name="auth_footer">Better together. ❤️</string>
+    <string name="auth_error_title">Sign-in error</string>
+    <string name="nav_checkin">Check-in</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_friends">Friends</string>
+    <string name="nav_insights">Insights</string>
+    <string name="nav_settings">Settings</string>
+    <string name="home_title">Are we okay today?</string>
+    <string name="home_subtitle">Select your current mood and reflect.</string>
+    <string name="home_recorded">Check-in recorded!</string>
+    <string name="home_thanks">Thank you for checking in. Together we support each other with zero judgment.</string>
+    <string name="home_new_checkin">New Check-in</string>
+    <string name="home_note_label">Add a reflection note (optional):</string>
+    <string name="home_note_hint">How was your day? Write here...</string>
+    <string name="home_share_public">Share publicly in community feed</string>
+    <string name="home_share_public_desc">Posted anonymously, with mood indicator.</string>
+    <string name="home_complete_checkin">Complete Check-in</string>
+    <string name="feed_title">Community Feed</string>
+    <string name="feed_empty_title">No Public Posts Yet</string>
+    <string name="feed_empty_body">Check in and share your reflection note publicly!</string>
+    <string name="comments_empty">No comments yet. Leave a kind word!</string>
+    <string name="comment_hint">Write a supportive comment...</string>
+    <string name="action_send">Send</string>
+    <string name="action_search">Search</string>
+    <string name="friends_search_hint">Search profiles to connect...</string>
+    <string name="friends_search_results">Search results:</string>
+    <string name="friends_add">Add</string>
+    <string name="friends_pending">Pending Requests</string>
+    <string name="friends_accept">Accept</string>
+    <string name="friends_circle">Your Circle</string>
+    <string name="friends_circle_empty_title">Build your support circle</string>
+    <string name="friends_circle_empty_body">Search for profiles and add them to see how your friends are doing.</string>
+    <string name="insights_no_checkin">no check-in</string>
+    <string name="insights_daily_streak">Daily Streak</string>
+    <string name="insights_support_given">Support Given</string>
+    <string name="insights_weekly_history">Weekly History</string>
+    <string name="insights_mood_distribution">Mood Distribution</string>
+    <string name="settings_edit_profile">Edit Profile</string>
+    <string name="settings_profile_updated">Profile updated successfully!</string>
+    <string name="settings_username">Username</string>
+    <string name="settings_choose_avatar">Choose your avatar:</string>
+    <string name="settings_save">Save Settings</string>
+    <string name="settings_sign_out">Sign Out</string>
+    <string name="settings_sign_out_desc">To sign out and sign in with a different profile, tap below.</string>
+    <string name="auth_err_client_id">Please set a valid Google Web Client ID in strings.xml.</string>
+    <string name="auth_err_profile">Could not create the user profile.</string>
+    <string name="auth_err_credential">Received an invalid credential type.</string>
+    <string name="auth_err_google_failed">Google sign-in failed: %1$s</string>
+    <string name="auth_err_unexpected">Unexpected error: %1$s</string>
+    <string-array name="daily_motivation">
+        <item>You showed up today, and that already counts.</item>
+        <item>Small steps are still steps.</item>
+        <item>Feelings are visitors. You do not have to move in with them.</item>
+        <item>It is okay to rest. Rest is part of the work.</item>
+        <item>You do not need to have it all figured out today.</item>
+        <item>Be as kind to yourself as you would be to a friend.</item>
+        <item>One breath at a time is enough.</item>
+        <item>Asking for support is a sign of strength.</item>
+        <item>Not every day has to be productive to be valuable.</item>
+        <item>You have gotten through every hard day so far.</item>
+        <item>Your pace is allowed to be your own.</item>
+        <item>Today, notice one thing that felt a little lighter.</item>
+        <item>It is fine to say no when you are running low.</item>
+        <item>Progress is not always loud.</item>
+        <item>Drink some water, unclench your shoulders, breathe out slowly.</item>
+        <item>You are more than your worst moment.</item>
+        <item>Talking about how you feel can make it lighter.</item>
+        <item>Healing is not a straight line.</item>
+        <item>Give yourself credit for what you handled today.</item>
+        <item>You are allowed to take up space.</item>
+        <item>A short walk can change the weather in your mind.</item>
+        <item>Comparison steals calm. Come back to your own day.</item>
+        <item>Something small and kind for yourself counts as self-care.</item>
+        <item>Sleep is not laziness, it is repair.</item>
+        <item>It is okay to feel two things at once.</item>
+        <item>Reach out to someone you trust, even with a single word.</item>
+        <item>You do not have to earn rest.</item>
+        <item>Be patient with the part of you that is still learning.</item>
+        <item>Tomorrow is a new page, and today was a chapter you got through.</item>
+        <item>Checking in on yourself is a quiet act of care.</item>
+    </string-array>
+    <string name="motivation_title">Today\'s note for you</string>
+    <string name="motivation_share">Share</string>
+    <string name="acct_title">Who is this account for?</string>
+    <string name="acct_desc">Choose how you will use the app. You can change this later.</string>
+    <string name="acct_me">For myself</string>
+    <string name="acct_psy">I am a psychologist</string>
 </resources>

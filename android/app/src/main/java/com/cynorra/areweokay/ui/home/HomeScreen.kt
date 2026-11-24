@@ -66,6 +66,21 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.cynorra.areweokay.R
+import com.cynorra.areweokay.data.MoodScale
+import com.cynorra.areweokay.ui.wellbeing.BreathingScreen
+import com.cynorra.areweokay.ui.wellbeing.CrisisScreen
+import com.cynorra.areweokay.ui.wellbeing.JournalScreen
+import com.cynorra.areweokay.ui.wellbeing.Overlay
+import com.cynorra.areweokay.ui.psych.PsychHub
+import com.cynorra.areweokay.data.PsychDeepLink
+import com.cynorra.areweokay.ui.wellbeing.PrivacyAndRemindersCard
+import com.cynorra.areweokay.ui.wellbeing.ReportDialog
+import com.cynorra.areweokay.ui.wellbeing.ShareCard
+import com.cynorra.areweokay.ui.wellbeing.WellbeingHub
 import com.cynorra.areweokay.data.Checkin
 import com.cynorra.areweokay.data.Comment
 import com.cynorra.areweokay.data.LocalDataRepository
@@ -89,14 +104,20 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    var overlay by remember { mutableStateOf<Overlay?>(null) }
+    BackHandler(enabled = overlay != null) { overlay = null }
+    // Shared psychologist profile link (https://<host>/p/<id>) opens the directory profile.
+    LaunchedEffect(PsychDeepLink.pendingId) { if (PsychDeepLink.pendingId != null) overlay = Overlay.Psych }
     
     val navigationItems = listOf(
-        Triple("Check-in", Icons.Default.Check, 0),
-        Triple("Akış", Icons.Default.Home, 1),
-        Triple("Arkadaşlar", Icons.Default.Person, 2),
-        Triple("Analizler", Icons.Default.Star, 3),
-        Triple("Ayarlar", Icons.Default.Settings, 4)
+        Triple(stringResource(R.string.nav_checkin), Icons.Default.Check, 0),
+        Triple(stringResource(R.string.nav_feed), Icons.Default.Home, 1),
+        Triple(stringResource(R.string.nav_friends), Icons.Default.Person, 2),
+        Triple(stringResource(R.string.nav_insights), Icons.Default.Star, 3),
+        Triple(stringResource(R.string.nav_settings), Icons.Default.Settings, 4)
     )
+
+    AccountTypeDialog(onPsychologist = { overlay = Overlay.Psych })
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -131,12 +152,32 @@ fun HomeScreen(
                 .background(OkBeige)
                 .padding(innerPadding)
         ) {
-            when (selectedTab) {
-                0 -> CheckinTab()
-                1 -> FeedTab()
-                2 -> FriendsTab()
-                3 -> InsightsTab()
-                4 -> SettingsTab(onSignOut = onSignOut)
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    TextButton(onClick = { overlay = Overlay.Psych }) {
+                        Text("🩺 " + stringResource(R.string.psy_entry), color = OkTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+                if (selectedTab == 0) DailyMotivationCard()
+                Box(modifier = Modifier.weight(1f)) {
+                    when (selectedTab) {
+                        0 -> CheckinTab(onOpen = { overlay = it })
+                        1 -> FeedTab()
+                        2 -> FriendsTab()
+                        3 -> InsightsTab()
+                        4 -> SettingsTab(onSignOut = onSignOut)
+                    }
+                }
+            }
+            when (overlay) {
+                Overlay.Crisis -> CrisisScreen(onClose = { overlay = null }, onBreathe = { overlay = Overlay.Breathing })
+                Overlay.Breathing -> BreathingScreen(onClose = { overlay = null })
+                Overlay.Journal -> JournalScreen(onClose = { overlay = null })
+                Overlay.Psych -> PsychHub(onClose = { overlay = null }, onCrisis = { overlay = Overlay.Crisis })
+                null -> {}
             }
         }
     }
@@ -146,10 +187,13 @@ fun HomeScreen(
 // TAB 1: CHECK-IN
 // -------------------------------------------------------------
 @Composable
-fun CheckinTab() {
+fun CheckinTab(onOpen: (Overlay) -> Unit = {}) {
     val dataRepository = LocalDataRepository.current
     val coroutineScope = rememberCoroutineScope()
-    var mood by remember { mutableStateOf<MoodState?>(null) }
+    val ctx = LocalContext.current
+    var level by remember { mutableStateOf<Int?>(null) }
+    var emotions by remember { mutableStateOf(setOf<String>()) }
+    var shareStreak by remember { mutableStateOf(0) }
     var note by remember { mutableStateOf("") }
     var isPublic by remember { mutableStateOf(true) }
     var checkinSuccess by remember { mutableStateOf(false) }
@@ -165,14 +209,14 @@ fun CheckinTab() {
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Are we okay today?",
+            text = stringResource(R.string.home_title),
             fontSize = 32.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Select your current mood and reflect.",
+            text = stringResource(R.string.home_subtitle),
             fontSize = 15.sp,
             color = OkMuted
         )
@@ -192,22 +236,39 @@ fun CheckinTab() {
                     Text(text = "🫂", fontSize = 48.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Check-in Recorded!",
+                        text = stringResource(R.string.home_recorded),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = OkBlack
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Thank you for checking in. Together we support each other with zero judgment.",
+                        text = stringResource(R.string.home_thanks),
                         fontSize = 14.sp,
                         color = OkMuted,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
+                    LaunchedEffect(Unit) { shareStreak = dataRepository.getUserStats().streak }
                     Button(
                         onClick = {
-                            mood = null
+                            val lv = level ?: 3
+                            ShareCard.share(
+                                ctx, lv,
+                                emotions.mapNotNull { k -> emotionRes[k]?.let { ctx.getString(it) } },
+                                shareStreak, dataRepository.getCurrentUserSync()?.id
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = OkTeal),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("📤 " + stringResource(R.string.share_mood_card), fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            level = null
+                            emotions = emptySet()
                             note = ""
                             checkinSuccess = false
                             errorMsg = null
@@ -215,56 +276,84 @@ fun CheckinTab() {
                         colors = ButtonDefaults.buttonColors(containerColor = OkOrange),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("New Check-in", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.home_new_checkin), fontWeight = FontWeight.Bold)
                     }
                 }
             }
         } else {
-            // Mood Selector Row
+            // Mood v2 selector: 5 levels
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf(
-                    Pair(MoodState.good, "😎\nGood"),
-                    Pair(MoodState.bad, "😔\nNot Okay"),
-                    Pair(MoodState.unsure, "🤔\nUnsure")
-                ).forEach { (mState, label) ->
-                    val isSelected = mood == mState
+                val moodNames = listOf(R.string.mood_1, R.string.mood_2, R.string.mood_3, R.string.mood_4, R.string.mood_5)
+                (1..5).forEach { lv ->
+                    val isSelected = level == lv
                     Column(
                         modifier = Modifier
-                            .size(90.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .width(62.dp)
+                            .clip(RoundedCornerShape(18.dp))
                             .background(if (isSelected) OkOrangeLight else OkSurface)
-                            .border(
-                                1.dp,
-                                if (isSelected) OkOrange else OkBorder,
-                                RoundedCornerShape(20.dp)
-                            )
-                            .clickable {
-                                mood = mState
-                                errorMsg = null
-                            }
-                            .padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                            .border(1.dp, if (isSelected) OkOrange else OkBorder, RoundedCornerShape(18.dp))
+                            .clickable { level = lv }
+                            .padding(vertical = 10.dp, horizontal = 2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val parts = label.split("\n")
-                        Text(text = parts[0], fontSize = 24.sp)
+                        Text(text = MoodScale.emojis[lv - 1], fontSize = 28.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = parts[1],
-                            fontSize = 13.sp,
+                            text = stringResource(moodNames[lv - 1]),
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
                             color = if (isSelected) OkOrangeShade else OkBlack
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            if (mood != null) {
+            if (level != null) {
+                // Emotion labels (multi-select)
+                Text(
+                    text = stringResource(R.string.emotions_prompt),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = OkBlack,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                MoodScale.emotionKeys.chunked(3).forEach { rowKeys ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowKeys.forEach { k ->
+                            val on = k in emotions
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (on) OkOrangeLight else OkSurface)
+                                    .border(1.dp, if (on) OkOrange else OkBorder, RoundedCornerShape(14.dp))
+                                    .clickable { emotions = if (on) emotions - k else emotions + k }
+                                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(emotionRes.getValue(k)),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    color = if (on) OkOrangeShade else OkBlack
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = OkSurface),
@@ -273,7 +362,7 @@ fun CheckinTab() {
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            text = "Add a reflection note (optional):",
+                            text = stringResource(R.string.home_note_label),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = OkBlack
@@ -282,7 +371,7 @@ fun CheckinTab() {
                         OutlinedTextField(
                             value = note,
                             onValueChange = { note = it },
-                            placeholder = { Text("Günün nasıl geçti? Buraya yaz...", color = OkMuted) },
+                            placeholder = { Text(stringResource(R.string.home_note_hint), color = OkMuted) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(120.dp),
@@ -313,13 +402,13 @@ fun CheckinTab() {
                             Spacer(modifier = Modifier.width(4.dp))
                             Column {
                                 Text(
-                                    text = "Share publicly in community feed",
+                                    text = stringResource(R.string.home_share_public),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = OkBlack
                                 )
                                 Text(
-                                    text = "Posted anonymously, with mood indicator.",
+                                    text = stringResource(R.string.home_share_public_desc),
                                     fontSize = 12.sp,
                                     color = OkMuted
                                 )
@@ -340,7 +429,7 @@ fun CheckinTab() {
                         Button(
                             onClick = {
                                 coroutineScope.launch {
-                                    val result = dataRepository.createCheckin(mood!!, note, isPublic)
+                                    val result = dataRepository.createCheckin(level!!, emotions.toList(), note, isPublic)
                                     if (result.isSuccess) {
                                         checkinSuccess = true
                                     } else {
@@ -354,14 +443,24 @@ fun CheckinTab() {
                             colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text("Check-in'i Tamamla", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(stringResource(R.string.home_complete_checkin), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         }
                     }
                 }
             }
         }
+        Spacer(modifier = Modifier.height(24.dp))
+        WellbeingHub(onOpen)
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
+
+private val emotionRes = mapOf(
+    "calm" to R.string.emo_calm, "happy" to R.string.emo_happy, "grateful" to R.string.emo_grateful,
+    "hopeful" to R.string.emo_hopeful, "energetic" to R.string.emo_energetic, "tired" to R.string.emo_tired,
+    "anxious" to R.string.emo_anxious, "stressed" to R.string.emo_stressed, "sad" to R.string.emo_sad,
+    "lonely" to R.string.emo_lonely, "angry" to R.string.emo_angry, "overwhelmed" to R.string.emo_overwhelmed
+)
 
 // -------------------------------------------------------------
 // TAB 2: COMMUNITY FEED
@@ -381,7 +480,7 @@ fun FeedTab() {
                 .padding(vertical = 16.dp, horizontal = 24.dp)
         ) {
             Text(
-                text = "Community Feed",
+                text = stringResource(R.string.feed_title),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = OkBlack
@@ -399,13 +498,13 @@ fun FeedTab() {
                 Text(text = "⛅", fontSize = 48.sp)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "No Public Posts Yet",
+                    text = stringResource(R.string.feed_empty_title),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = OkBlack
                 )
                 Text(
-                    text = "Check in and share your reflection note publicly!",
+                    text = stringResource(R.string.feed_empty_body),
                     fontSize = 13.sp,
                     color = OkMuted,
                     textAlign = TextAlign.Center
@@ -434,7 +533,9 @@ fun FeedTab() {
                             coroutineScope.launch {
                                 dataRepository.addComment(post.id, content)
                             }
-                        }
+                        },
+                        onReport = { reason -> coroutineScope.launch { dataRepository.reportContent("post", post.id, reason) } },
+                        onBlock = { coroutineScope.launch { dataRepository.blockUser(post.user_id) } }
                     )
                 }
             }
@@ -446,8 +547,12 @@ fun FeedTab() {
 fun FeedPostCard(
     post: Post,
     onReactionClick: (String) -> Unit,
-    onAddComment: (String) -> Unit
+    onAddComment: (String) -> Unit,
+    onReport: (String) -> Unit = {},
+    onBlock: () -> Unit = {}
 ) {
+    var showReport by remember { mutableStateOf(false) }
+    if (showReport) ReportDialog(onDismiss = { showReport = false }, onReport = onReport, onBlock = onBlock)
     var expandedComments by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -476,10 +581,10 @@ fun FeedPostCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = post.username,
+                        text = post.username + if (post.verifiedPsychologist) "  ✔ " + stringResource(R.string.psy_verified) else "",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = OkBlack
+                        color = if (post.verifiedPsychologist) OkTeal else OkBlack
                     )
                     Text(
                         text = if (post.is_anonymous) "Shared Anonymously" else "Shared Profile",
@@ -506,6 +611,9 @@ fun FeedPostCard(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
+                }
+                TextButton(onClick = { showReport = true }) {
+                    Text("⋯", fontSize = 20.sp, color = OkMuted, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -598,7 +706,7 @@ fun FeedPostCard(
                 // List comments
                 if (post.comments.isEmpty()) {
                     Text(
-                        text = "No comments yet. Leave a kind word!",
+                        text = stringResource(R.string.comments_empty),
                         fontSize = 13.sp,
                         color = OkMuted,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -623,7 +731,7 @@ fun FeedPostCard(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "1h ago", // Simplified
+                                        text = relativeTimeLabel(comment.created_at),
                                         fontSize = 10.sp,
                                         color = OkMuted
                                     )
@@ -649,7 +757,7 @@ fun FeedPostCard(
                     OutlinedTextField(
                         value = commentText,
                         onValueChange = { commentText = it },
-                        placeholder = { Text("Destekleyici bir yorum yaz...", fontSize = 13.sp, color = OkMuted) },
+                        placeholder = { Text(stringResource(R.string.comment_hint), fontSize = 13.sp, color = OkMuted) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -684,7 +792,7 @@ fun FeedPostCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Send,
-                            contentDescription = "Send",
+                            contentDescription = stringResource(R.string.action_send),
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
@@ -735,7 +843,7 @@ fun FriendsTab() {
             .padding(24.dp)
     ) {
         Text(
-            text = "Arkadaşlar",
+            text = stringResource(R.string.nav_friends),
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
@@ -756,8 +864,8 @@ fun FriendsTab() {
                         searchQuery = it
                         performSearch(it)
                     },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = OkMuted) },
-                    placeholder = { Text("Bağlantı kurmak için profil ara...", color = OkMuted) },
+                    leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = stringResource(R.string.action_search), tint = OkMuted) },
+                    placeholder = { Text(stringResource(R.string.friends_search_hint), color = OkMuted) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -769,7 +877,7 @@ fun FriendsTab() {
                 if (searchResults.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Search Results:",
+                        text = stringResource(R.string.friends_search_results),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         color = OkMuted
@@ -815,7 +923,7 @@ fun FriendsTab() {
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 modifier = Modifier.height(30.dp)
                             ) {
-                                Text("Ekle", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.friends_add), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -828,7 +936,7 @@ fun FriendsTab() {
         // Incoming Friend Requests
         if (friendRequests.isNotEmpty()) {
             Text(
-                text = "Bekleyen İstekler",
+                text = stringResource(R.string.friends_pending),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = OkBlack
@@ -872,7 +980,7 @@ fun FriendsTab() {
                             colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Kabul Et", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.friends_accept), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -882,7 +990,7 @@ fun FriendsTab() {
 
         // Friends List
         Text(
-            text = "Çevren",
+            text = stringResource(R.string.friends_circle),
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             color = OkBlack
@@ -903,14 +1011,14 @@ fun FriendsTab() {
                     Text(text = "🤝", fontSize = 36.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Destek çevreni oluştur",
+                        text = stringResource(R.string.friends_circle_empty_title),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = OkBlack
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Profil ara ve arkadaşlarının nasıl olduğunu görmek için ekle.",
+                        text = stringResource(R.string.friends_circle_empty_body),
                         fontSize = 12.sp,
                         color = OkMuted,
                         textAlign = TextAlign.Center
@@ -975,7 +1083,7 @@ fun FriendsTab() {
                             }
                         } else {
                             Text(
-                                text = "check-in yok",
+                                text = stringResource(R.string.insights_no_checkin),
                                 color = OkMuted,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -1009,7 +1117,7 @@ fun InsightsTab() {
             .padding(24.dp)
     ) {
         Text(
-            text = "Analizler",
+            text = stringResource(R.string.nav_insights),
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
@@ -1040,7 +1148,7 @@ fun InsightsTab() {
                         color = OkBlack
                     )
                     Text(
-                        text = "Günlük Seri",
+                        text = stringResource(R.string.insights_daily_streak),
                         fontSize = 12.sp,
                         color = OkMuted
                     )
@@ -1065,7 +1173,7 @@ fun InsightsTab() {
                         color = OkBlack
                     )
                     Text(
-                        text = "Verilen Destek",
+                        text = stringResource(R.string.insights_support_given),
                         fontSize = 12.sp,
                         color = OkMuted
                     )
@@ -1084,7 +1192,7 @@ fun InsightsTab() {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Haftalık Geçmiş",
+                    text = stringResource(R.string.insights_weekly_history),
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = OkBlack
@@ -1136,7 +1244,7 @@ fun InsightsTab() {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Ruh Hali Dağılımı",
+                    text = stringResource(R.string.insights_mood_distribution),
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = OkBlack
@@ -1229,7 +1337,7 @@ fun SettingsTab(
             .padding(24.dp)
     ) {
         Text(
-            text = "Ayarlar",
+            text = stringResource(R.string.nav_settings),
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
             color = OkBlack
@@ -1245,7 +1353,7 @@ fun SettingsTab(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Profili Düzenle",
+                    text = stringResource(R.string.settings_edit_profile),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = OkBlack
@@ -1254,7 +1362,7 @@ fun SettingsTab(
 
                 if (updateSuccess) {
                     Text(
-                        text = "Profil başarıyla güncellendi!",
+                        text = stringResource(R.string.settings_profile_updated),
                         color = Color(0xFF2E7D32),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -1279,7 +1387,7 @@ fun SettingsTab(
                         updateSuccess = false
                         errorMsg = null
                     },
-                    label = { Text("Kullanıcı Adı") },
+                    label = { Text(stringResource(R.string.settings_username)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1292,7 +1400,7 @@ fun SettingsTab(
 
                 // Avatar emoji picker
                 Text(
-                    text = "Avatarını Seç:",
+                    text = stringResource(R.string.settings_choose_avatar),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = OkBlack
@@ -1384,10 +1492,14 @@ fun SettingsTab(
                     colors = ButtonDefaults.buttonColors(containerColor = OkBlack),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Ayarları Kaydet", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.settings_save), fontWeight = FontWeight.Bold)
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        PrivacyAndRemindersCard(onAccountDeleted = onSignOut)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -1400,14 +1512,14 @@ fun SettingsTab(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Çıkış Yap",
+                    text = stringResource(R.string.settings_sign_out),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = OkBlack
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Oturumunuzu kapatmak ve farklı bir profil ile giriş yapmak için aşağıya tıklayın.",
+                    text = stringResource(R.string.settings_sign_out_desc),
                     fontSize = 13.sp,
                     color = OkMuted
                 )
@@ -1424,9 +1536,71 @@ fun SettingsTab(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Çıkış Yap", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.settings_sign_out), fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
     }
+}
+
+/** Real, localized "5 minutes ago" label from a Supabase timestamptz; empty if it cannot be parsed. */
+private fun relativeTimeLabel(iso: String): String {
+    val millis = runCatching { java.time.OffsetDateTime.parse(iso).toInstant().toEpochMilli() }.getOrNull() ?: return ""
+    return android.text.format.DateUtils.getRelativeTimeSpanString(
+        millis, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS
+    ).toString()
+}
+
+// -------------------------------------------------------------
+// Daily motivation + account type (first run)
+// -------------------------------------------------------------
+@Composable
+private fun DailyMotivationCard() {
+    val ctx = LocalContext.current
+    val messages = androidx.compose.ui.res.stringArrayResource(R.array.daily_motivation)
+    val day = remember { java.time.LocalDate.now().toEpochDay().toInt() }
+    val message = messages[Math.floorMod(day, messages.size)]
+    val title = stringResource(R.string.motivation_title)
+    val shareLabel = stringResource(R.string.motivation_share)
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = OkSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, OkBorder)
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = OkOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(message, color = OkBlack, fontSize = 14.sp)
+            }
+            TextButton(onClick = {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, message)
+                }
+                ctx.startActivity(android.content.Intent.createChooser(send, shareLabel))
+            }) { Text(shareLabel, color = OkTeal, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        }
+    }
+}
+
+@Composable
+private fun AccountTypeDialog(onPsychologist: () -> Unit) {
+    val ctx = LocalContext.current
+    val prefs = remember { ctx.getSharedPreferences("ok_ui", android.content.Context.MODE_PRIVATE) }
+    var show by remember { mutableStateOf(!prefs.getBoolean("account_type_chosen", false)) }
+    if (!show) return
+    fun choose(psy: Boolean) {
+        prefs.edit().putBoolean("account_type_chosen", true).apply()
+        show = false
+        if (psy) onPsychologist()
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { choose(false) },
+        title = { Text(stringResource(R.string.acct_title), fontWeight = FontWeight.Bold) },
+        text = { Text(stringResource(R.string.acct_desc)) },
+        confirmButton = { TextButton(onClick = { choose(false) }) { Text(stringResource(R.string.acct_me), color = OkOrange, fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = { choose(true) }) { Text(stringResource(R.string.acct_psy), color = OkTeal, fontWeight = FontWeight.Bold) } }
+    )
 }
