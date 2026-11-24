@@ -38,7 +38,18 @@ interface DataRepository {
     fun signOut()
     suspend fun updateProfile(username: String, avatarEmoji: String): Result<UserProfile>
     
-    suspend fun createCheckin(mood: MoodState, note: String, isPublic: Boolean): Result<Checkin>
+    /** Mood v2: [level] 1..5, [emotions] keys from [MoodScale.emotionKeys]. Legacy `mood` column is derived. */
+    suspend fun createCheckin(level: Int, emotions: List<String>, note: String, isPublic: Boolean): Result<Checkin>
+    val local: LocalStore
+    /** Records explicit consent (sensitive health data) locally and, best effort, on the user row. */
+    suspend fun recordConsent()
+    /** Deletes server data (RPC delete_my_account) and all local data. */
+    suspend fun deleteAccount(): Result<Unit>
+    suspend fun reportContent(targetType: String, targetId: String, reason: String): Boolean
+    suspend fun blockUser(userId: String): Boolean
+    fun checkinCount(): Int
+    fun lastCheckin(): Checkin?
+    fun setPendingInviter(inviterId: String?)
     fun getFeedPosts(): List<Post>
     suspend fun addReaction(postId: String, reactionType: String): Boolean
     suspend fun removeReaction(postId: String, reactionType: String): Boolean
@@ -67,6 +78,9 @@ class DefaultDataRepository(context: Context) : DataRepository {
     private val _userCheckins = MutableStateFlow<List<Checkin>>(emptyList())
     private val _friendships = MutableStateFlow<List<Friendship>>(emptyList())
 
+    override val local = LocalStore(context)
+    private val blockedIds = MutableStateFlow<Set<String>>(emptySet())
+
     private val repositoryScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var refreshJob: kotlinx.coroutines.Job? = null
 
@@ -94,6 +108,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
                         _currentUser.value = profile
                         fetchUserCheckins(profile.id)
                         fetchFriendships(profile.id)
+                        registerReferralIfAny(profile.id)
                     } else {
                         clearSessionState()
                     }
@@ -141,6 +156,7 @@ class DefaultDataRepository(context: Context) : DataRepository {
         _currentUser.value = null
         _userCheckins.value = emptyList()
         _friendships.value = emptyList()
+        blockedIds.value = emptySet()
     }
 
     private fun getIsoString(date: java.util.Date = java.util.Date()): String {
@@ -174,7 +190,17 @@ class DefaultDataRepository(context: Context) : DataRepository {
                         "comments(id,user_id,content,created_at,users:user_id(username,avatar_emoji))" +
                         "&deleted_at=is.null&status=eq.approved&order=created_at.desc"
                 )
+                val me = _currentUser.value
+                if (me != null) {
+                    try {
+                        val b = SupabaseApi.get("/blocks?blocker_id=eq.${me.id}&select=blocked_id")
+                        blockedIds.value = json.decodeFromString<List<BlockRow>>(b).map { it.blocked_id }.toSet()
+                    } catch (e: Exception) { /* blocks table may not exist yet */ }
+                }
+                val blocked = blockedIds.value
+                val verifiedPsy = if (me != null) PsychRepo.verifiedIds() else emptySet()
                 val supabasePosts = json.decodeFromString<List<SupabasePostResponse>>(rawJson)
+                    .filter { it.user_id !in blocked }
 
                 val mappedPosts = supabasePosts.map { sp ->
                     val reactionGroups = sp.reactions.groupBy { it.type }
@@ -197,10 +223,11 @@ class DefaultDataRepository(context: Context) : DataRepository {
                         content = sp.content,
                         mood = sp.mood,
                         is_anonymous = sp.is_anonymous,
+                        verifiedPsychologist = !sp.is_anonymous && sp.user_id in verifiedPsy,
                         created_at = sp.created_at,
                         reactions = rc,
                         userReactions = myReactions,
-                        comments = sp.comments.map { c ->
+                        comments = sp.comments.filter { it.user_id !in blocked }.map { c ->
                             Comment(
                                 id = c.id,
                                 post_id = sp.id,
@@ -277,13 +304,14 @@ class DefaultDataRepository(context: Context) : DataRepository {
                             attempt++
                         }
                     }
-                    created ?: return@withContext Result.failure(Exception("Profil oluşturulamadı."))
+                    created ?: return@withContext Result.failure(Exception("Could not create the profile."))
                 }
 
                 prefs.edit().putString("ok_session", json.encodeToString(profile)).apply()
                 _currentUser.value = profile
                 fetchUserCheckins(profile.id)
                 fetchFriendships(profile.id)
+                registerReferralIfAny(profile.id)
                 refreshFeed()
 
                 Result.success(profile)
@@ -324,8 +352,10 @@ class DefaultDataRepository(context: Context) : DataRepository {
         }
     }
 
-    override suspend fun createCheckin(mood: MoodState, note: String, isPublic: Boolean): Result<Checkin> {
+    override suspend fun createCheckin(level: Int, emotions: List<String>, note: String, isPublic: Boolean): Result<Checkin> {
         val current = _currentUser.value ?: return Result.failure(Exception("You must be logged in to check in"))
+        val lvl = level.coerceIn(1, 5)
+        val mood = MoodScale.toLegacy(lvl)
         return withContext(Dispatchers.IO) {
             try {
                 val checkinId = UUID.randomUUID().toString()
@@ -335,37 +365,44 @@ class DefaultDataRepository(context: Context) : DataRepository {
                     mood = mood,
                     note = note.takeIf { it.isNotEmpty() },
                     is_public = isPublic,
-                    created_at = getIsoString()
+                    created_at = getIsoString(),
+                    mood_level = lvl,
+                    emotions = emotions
                 )
 
-                // Insert checkin into Supabase
-                val checkinJson = json.encodeToString(newCheckin)
-                SupabaseApi.post("/checkins", checkinJson)
+                fun payload(v2: Boolean) = buildJsonObject {
+                    put("id", checkinId)
+                    put("user_id", current.id)
+                    put("mood", mood.toString())
+                    put("note", newCheckin.note)
+                    put("is_public", isPublic)
+                    put("created_at", newCheckin.created_at)
+                    if (v2) {
+                        put("mood_level", lvl)
+                        put("emotions", kotlinx.serialization.json.JsonArray(emotions.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+                    }
+                }.toString()
+                try {
+                    SupabaseApi.post("/checkins", payload(true))
+                } catch (e: IOException) {
+                    // Backend migration (mood_level/emotions columns) not applied yet: fall back to a legacy row.
+                    SupabaseApi.post("/checkins", payload(false))
+                }
 
                 if (isPublic && note.isNotEmpty()) {
-                    val newPost = Post(
-                        id = UUID.randomUUID().toString(),
-                        user_id = current.id,
-                        username = current.username,
-                        avatar_emoji = current.avatar_emoji,
-                        checkin_id = checkinId,
-                        content = note,
-                        mood = mood,
-                        is_anonymous = true,
-                        created_at = getIsoString()
-                    )
                     val postJson = buildJsonObject {
-                        put("id", newPost.id)
-                        put("user_id", newPost.user_id)
-                        put("checkin_id", newPost.checkin_id)
-                        put("content", newPost.content)
-                        put("mood", newPost.mood?.toString())
+                        put("id", UUID.randomUUID().toString())
+                        put("user_id", current.id)
+                        put("checkin_id", checkinId)
+                        put("content", note)
+                        put("mood", mood.toString())
                         put("is_anonymous", true)
                         put("status", "approved")
                     }.toString()
                     SupabaseApi.post("/posts", postJson)
                 }
 
+                local.lastCheckinDay = LocalStore.today()
                 fetchUserCheckins(current.id)
                 refreshFeed()
 
@@ -373,6 +410,84 @@ class DefaultDataRepository(context: Context) : DataRepository {
             } catch (e: Exception) {
                 Result.failure(e)
             }
+        }
+    }
+
+    override fun checkinCount(): Int = _userCheckins.value.size
+    override fun lastCheckin(): Checkin? = _userCheckins.value.firstOrNull()
+
+    override fun setPendingInviter(inviterId: String?) {
+        local.pendingInviterId = inviterId
+        _currentUser.value?.let { u -> repositoryScope.launch { registerReferralIfAny(u.id) } }
+    }
+
+    private suspend fun registerReferralIfAny(myId: String) {
+        val inviter = local.pendingInviterId ?: return
+        if (inviter == myId) { local.pendingInviterId = null; return }
+        try {
+            val body = buildJsonObject {
+                put("inviter_id", inviter); put("invitee_id", myId); put("source", "mood_card")
+            }.toString()
+            withContext(Dispatchers.IO) { SupabaseApi.post("/referrals", body) }
+            local.pendingInviterId = null
+        } catch (e: Exception) {
+            // Keep it pending (offline / table missing). A duplicate (409) means already counted.
+            if (e.message?.contains("409") == true) local.pendingInviterId = null
+        }
+    }
+
+    override suspend fun recordConsent() {
+        local.consentVersion = LocalStore.CURRENT_CONSENT_VERSION
+        val me = _currentUser.value ?: return
+        withContext(Dispatchers.IO) {
+            try {
+                val body = buildJsonObject {
+                    put("consent_version", LocalStore.CURRENT_CONSENT_VERSION)
+                    put("consent_at", getIsoString())
+                }.toString()
+                SupabaseApi.patch("/users?id=eq.${me.id}", body)
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // SECURITY DEFINER function from supabase/p0_migration.sql: removes the user's rows and the auth user.
+            SupabaseApi.post("/rpc/delete_my_account", "{}")
+            local.wipeAll()
+            prefs.edit().clear().apply()
+            clearSessionState()
+            refreshFeed()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun reportContent(targetType: String, targetId: String, reason: String): Boolean {
+        val me = _currentUser.value ?: return false
+        return withContext(Dispatchers.IO) {
+            try {
+                val body = buildJsonObject {
+                    put("reporter_id", me.id); put("target_type", targetType)
+                    put("target_id", targetId); put("reason", reason)
+                }.toString()
+                SupabaseApi.post("/reports", body)
+                true
+            } catch (e: Exception) { false }
+        }
+    }
+
+    override suspend fun blockUser(userId: String): Boolean {
+        val me = _currentUser.value ?: return false
+        if (userId == me.id) return false
+        return withContext(Dispatchers.IO) {
+            try {
+                SupabaseApi.post("/blocks", buildJsonObject { put("blocker_id", me.id); put("blocked_id", userId) }.toString())
+                blockedIds.value = blockedIds.value + userId
+                _feedPosts.value = _feedPosts.value.filter { it.user_id != userId }
+                true
+            } catch (e: Exception) { false }
         }
     }
 

@@ -3,6 +3,12 @@ package com.cynorra.areweokay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.cynorra.areweokay.components.AdGate
+import com.cynorra.areweokay.ui.consent.ConsentScreen
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -39,18 +45,37 @@ fun MainNavigation() {
                         )
                     }
                     entry<Home> {
-                        HomeScreen(
-                            onSignOut = {
-                                backStack.add(Auth)
-                                backStack.remove(Home)
+                        var consented by remember { mutableStateOf(dataRepository.local.hasValidConsent) }
+                        val toAuth = {
+                            backStack.add(Auth)
+                            backStack.remove(Home)
+                        }
+                        if (!consented) {
+                            ConsentScreen(
+                                onAccepted = { consented = true },
+                                onDeclined = {
+                                    dataRepository.signOut()
+                                    toAuth()
+                                }
+                            )
+                        } else {
+                            LaunchedEffect(Unit) {
+                                // Check-in chosen before login is only saved once consent exists.
+                                dataRepository.local.pendingMood?.let { key ->
+                                    dataRepository.local.pendingMood = null
+                                    val lv = when (key) { "good" -> 4; "bad" -> 1; else -> 3 }
+                                    dataRepository.createCheckin(lv, emptyList(), "", true)
+                                }
                             }
-                        )
+                            HomeScreen(onSignOut = { toAuth() })
+                        }
                     }
                 }
             )
         }
         
         // Reklamı uygulamanın her ekranında en alt kısımda gösteriyoruz
-        BannerAd(modifier = Modifier.fillMaxWidth())
+        // No ads on sensitive screens (consent, crisis, journal, breathing).
+        if (!AdGate.adsHidden) BannerAd(modifier = Modifier.fillMaxWidth())
     }
 }
