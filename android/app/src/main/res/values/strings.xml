@@ -398,4 +398,9 @@
     <string name="acct_desc">Choose how you will use the app. You can change this later.</string>
     <string name="acct_me">For myself</string>
     <string name="acct_psy">I am a psychologist</string>
+    <string name="social_title">Social links (optional)</string>
+    <string name="social_instagram">Instagram</string>
+    <string name="social_tiktok">TikTok</string>
+    <string name="social_x">X (Twitter)</string>
+    <string name="social_website">Website</string>
 </resources>

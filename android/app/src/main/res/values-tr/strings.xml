@@ -378,4 +378,9 @@
     <string name="acct_desc">Uygulamayı nasıl kullanacağını seç. Sonra değiştirebilirsin.</string>
     <string name="acct_me">Kendim için</string>
     <string name="acct_psy">Psikologum</string>
+    <string name="social_title">Sosyal medya (isteğe bağlı)</string>
+    <string name="social_instagram">Instagram</string>
+    <string name="social_tiktok">TikTok</string>
+    <string name="social_x">X (Twitter)</string>
+    <string name="social_website">Web sitesi</string>
 </resources>
