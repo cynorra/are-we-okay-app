@@ -99,6 +99,19 @@ object PsychRepo {
     private inline fun <reified T> list(raw: String): List<T> = json.decodeFromString(ListSerializer(kotlinx.serialization.serializer<T>()), raw)
 
     // ---- profile / onboarding / verification ----
+    @kotlinx.serialization.Serializable
+    data class SocialLinks(
+        val instagram: String? = null,
+        val tiktok: String? = null,
+        val x_handle: String? = null,
+        val website: String? = null
+    )
+
+    /** Public social handles of a user (columns from supabase/p2_social_handles.sql). */
+    suspend fun socialLinks(uid: String): SocialLinks? = attempt {
+        list<SocialLinks>(SupabaseApi.get("/users?id=eq.$uid&select=instagram,tiktok,x_handle,website")).firstOrNull()
+    }
+
     suspend fun myProfile(uid: String): PsychProfile? = attempt { list<PsychProfile>(SupabaseApi.get("/psychologist_profiles?user_id=eq.$uid")).firstOrNull() }
 
     suspend fun saveProfile(p: PsychProfile, exists: Boolean): Boolean = attempt {
