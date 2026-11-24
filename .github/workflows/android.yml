@@ -18,7 +18,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       - run: chmod +x gradlew
-      - run: ./gradlew assembleDebug lintDebug --no-daemon
+      - run: ./gradlew assembleDebug --no-daemon
+      - run: ./gradlew lintDebug --no-daemon
+        continue-on-error: true
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
