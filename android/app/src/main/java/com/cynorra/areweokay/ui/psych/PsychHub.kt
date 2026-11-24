@@ -284,9 +284,11 @@ private fun ProfileScreen(id: String, go: (PS) -> Unit) {
     var showLink by remember { mutableStateOf(false) }
     var msg by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableIntStateOf(0) }
+    var social by remember { mutableStateOf<PsychRepo.SocialLinks?>(null) }
 
     LaunchedEffect(id, tick) {
         profile = PsychRepo.profile(id); loaded = true
+        social = PsychRepo.socialLinks(id)
         stat = PsychRepo.ratingStats()[id]
         reviews = PsychRepo.reviews(id)
         followers = PsychRepo.followerCount(id)
@@ -314,6 +316,24 @@ private fun ProfileScreen(id: String, go: (PS) -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(priceText(p), fontWeight = FontWeight.Bold, color = OkBlack)
             Muted(stringResource(R.string.psy_price_info))
+        }
+        social?.let { sl ->
+            val links = listOfNotNull(
+                sl.instagram?.takeIf { it.isNotBlank() }?.let { "Instagram" to socialUrl("https://instagram.com/", it) },
+                sl.tiktok?.takeIf { it.isNotBlank() }?.let { "TikTok" to socialUrl("https://tiktok.com/@", it) },
+                sl.x_handle?.takeIf { it.isNotBlank() }?.let { "X" to socialUrl("https://x.com/", it) },
+                sl.website?.takeIf { it.isNotBlank() }?.let { "Web" to socialUrl("https://", it) }
+            )
+            if (links.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    links.forEach { (label, url) ->
+                        Btn(label, {
+                            runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                        }, primary = false)
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(6.dp))
         if (uid != null && uid != p.user_id) {
@@ -764,4 +784,11 @@ private fun ShareWithPsychologistScreen() {
             confirmButton = { TextButton(onClick = { audit = null }) { Text(stringResource(R.string.close)) } }
         )
     }
+}
+
+/** Builds a safe https URL from a handle or a pasted link; only http(s) is ever opened. */
+private fun socialUrl(base: String, raw: String): String {
+    val v = raw.trim().removePrefix("@")
+    if (v.startsWith("https://") || v.startsWith("http://")) return v
+    return base + v.removePrefix("https://").removePrefix("http://")
 }
