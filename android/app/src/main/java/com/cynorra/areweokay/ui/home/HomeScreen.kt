@@ -117,6 +117,8 @@ fun HomeScreen(
         Triple(stringResource(R.string.nav_settings), Icons.Default.Settings, 4)
     )
 
+    AccountTypeDialog(onPsychologist = { overlay = Overlay.Psych })
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
@@ -159,6 +161,7 @@ fun HomeScreen(
                         Text("🩺 " + stringResource(R.string.psy_entry), color = OkTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
+                if (selectedTab == 0) DailyMotivationCard()
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedTab) {
                         0 -> CheckinTab(onOpen = { overlay = it })
@@ -1546,4 +1549,58 @@ private fun relativeTimeLabel(iso: String): String {
     return android.text.format.DateUtils.getRelativeTimeSpanString(
         millis, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS
     ).toString()
+}
+
+// -------------------------------------------------------------
+// Daily motivation + account type (first run)
+// -------------------------------------------------------------
+@Composable
+private fun DailyMotivationCard() {
+    val ctx = LocalContext.current
+    val messages = androidx.compose.ui.res.stringArrayResource(R.array.daily_motivation)
+    val day = remember { java.time.LocalDate.now().toEpochDay().toInt() }
+    val message = messages[Math.floorMod(day, messages.size)]
+    val title = stringResource(R.string.motivation_title)
+    val shareLabel = stringResource(R.string.motivation_share)
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = OkSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, OkBorder)
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = OkOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(message, color = OkBlack, fontSize = 14.sp)
+            }
+            TextButton(onClick = {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, message)
+                }
+                ctx.startActivity(android.content.Intent.createChooser(send, shareLabel))
+            }) { Text(shareLabel, color = OkTeal, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        }
+    }
+}
+
+@Composable
+private fun AccountTypeDialog(onPsychologist: () -> Unit) {
+    val ctx = LocalContext.current
+    val prefs = remember { ctx.getSharedPreferences("ok_ui", android.content.Context.MODE_PRIVATE) }
+    var show by remember { mutableStateOf(!prefs.getBoolean("account_type_chosen", false)) }
+    if (!show) return
+    fun choose(psy: Boolean) {
+        prefs.edit().putBoolean("account_type_chosen", true).apply()
+        show = false
+        if (psy) onPsychologist()
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { choose(false) },
+        title = { Text(stringResource(R.string.acct_title), fontWeight = FontWeight.Bold) },
+        text = { Text(stringResource(R.string.acct_desc)) },
+        confirmButton = { TextButton(onClick = { choose(false) }) { Text(stringResource(R.string.acct_me), color = OkOrange, fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = { choose(true) }) { Text(stringResource(R.string.acct_psy), color = OkTeal, fontWeight = FontWeight.Bold) } }
+    )
 }

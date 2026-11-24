@@ -360,4 +360,42 @@
     <string name="auth_err_credential">Received an invalid credential type.</string>
     <string name="auth_err_google_failed">Google sign-in failed: %1$s</string>
     <string name="auth_err_unexpected">Unexpected error: %1$s</string>
+    <string-array name="daily_motivation">
+        <item>You showed up today, and that already counts.</item>
+        <item>Small steps are still steps.</item>
+        <item>Feelings are visitors. You do not have to move in with them.</item>
+        <item>It is okay to rest. Rest is part of the work.</item>
+        <item>You do not need to have it all figured out today.</item>
+        <item>Be as kind to yourself as you would be to a friend.</item>
+        <item>One breath at a time is enough.</item>
+        <item>Asking for support is a sign of strength.</item>
+        <item>Not every day has to be productive to be valuable.</item>
+        <item>You have gotten through every hard day so far.</item>
+        <item>Your pace is allowed to be your own.</item>
+        <item>Today, notice one thing that felt a little lighter.</item>
+        <item>It is fine to say no when you are running low.</item>
+        <item>Progress is not always loud.</item>
+        <item>Drink some water, unclench your shoulders, breathe out slowly.</item>
+        <item>You are more than your worst moment.</item>
+        <item>Talking about how you feel can make it lighter.</item>
+        <item>Healing is not a straight line.</item>
+        <item>Give yourself credit for what you handled today.</item>
+        <item>You are allowed to take up space.</item>
+        <item>A short walk can change the weather in your mind.</item>
+        <item>Comparison steals calm. Come back to your own day.</item>
+        <item>Something small and kind for yourself counts as self-care.</item>
+        <item>Sleep is not laziness, it is repair.</item>
+        <item>It is okay to feel two things at once.</item>
+        <item>Reach out to someone you trust, even with a single word.</item>
+        <item>You do not have to earn rest.</item>
+        <item>Be patient with the part of you that is still learning.</item>
+        <item>Tomorrow is a new page, and today was a chapter you got through.</item>
+        <item>Checking in on yourself is a quiet act of care.</item>
+    </string-array>
+    <string name="motivation_title">Today's note for you</string>
+    <string name="motivation_share">Share</string>
+    <string name="acct_title">Who is this account for?</string>
+    <string name="acct_desc">Choose how you will use the app. You can change this later.</string>
+    <string name="acct_me">For myself</string>
+    <string name="acct_psy">I am a psychologist</string>
 </resources>

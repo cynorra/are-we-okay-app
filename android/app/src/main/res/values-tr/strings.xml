@@ -340,4 +340,42 @@
     <string name="auth_err_credential">Geçersiz kimlik bilgisi türü alındı.</string>
     <string name="auth_err_google_failed">Google girişi başarısız oldu: %1$s</string>
     <string name="auth_err_unexpected">Beklenmeyen hata: %1$s</string>
+    <string-array name="daily_motivation">
+        <item>Bugün geldin, bu bile sayılır.</item>
+        <item>Küçük adımlar da adımdır.</item>
+        <item>Duygular misafirdir. Onlarla birlikte yaşamak zorunda değilsin.</item>
+        <item>Dinlenmek sorun değil. Dinlenmek işin bir parçası.</item>
+        <item>Bugün her şeyi çözmek zorunda değilsin.</item>
+        <item>Bir arkadaşına nasıl davranırsan kendine de öyle davran.</item>
+        <item>Her seferinde tek bir nefes yeter.</item>
+        <item>Destek istemek güçlülük işaretidir.</item>
+        <item>Her gün verimli olmak zorunda değil, yine de değerlisin.</item>
+        <item>Şimdiye kadarki her zor günü atlattın.</item>
+        <item>Kendi hızında ilerlemene izin var.</item>
+        <item>Bugün biraz hafiflettiği bir şeyi fark et.</item>
+        <item>Gücün azaldığında hayır demek sorun değil.</item>
+        <item>İlerleme her zaman gürültülü olmaz.</item>
+        <item>Biraz su iç, omuzlarını bırak, yavaşça nefes ver.</item>
+        <item>En kötü anından çok daha fazlasısın.</item>
+        <item>Nasıl hissettiğini anlatmak yükü hafifletebilir.</item>
+        <item>İyileşme düz bir çizgi değildir.</item>
+        <item>Bugün başardıkların için kendine pay ver.</item>
+        <item>Yer kaplamana izin var.</item>
+        <item>Kısa bir yürüyüş zihnindeki havayı değiştirebilir.</item>
+        <item>Kıyaslamak huzuru çalar. Kendi gününe dön.</item>
+        <item>Kendine yapılan küçük ve nazik bir şey de öz bakımdır.</item>
+        <item>Uyku tembellik değil, onarımdır.</item>
+        <item>Aynı anda iki şeyi hissetmek normaldir.</item>
+        <item>Güvendiğin birine tek kelimeyle bile olsa ulaş.</item>
+        <item>Dinlenmeyi hak etmek zorunda değilsin.</item>
+        <item>Hâlâ öğrenen yanına sabırlı ol.</item>
+        <item>Yarın yeni bir sayfa, bugün ise atlattığın bir bölümdü.</item>
+        <item>Kendine nasıl olduğunu sormak sessiz bir şefkattir.</item>
+    </string-array>
+    <string name="motivation_title">Bugün sana not</string>
+    <string name="motivation_share">Paylaş</string>
+    <string name="acct_title">Bu hesap kimin için?</string>
+    <string name="acct_desc">Uygulamayı nasıl kullanacağını seç. Sonra değiştirebilirsin.</string>
+    <string name="acct_me">Kendim için</string>
+    <string name="acct_psy">Psikologum</string>
 </resources>
