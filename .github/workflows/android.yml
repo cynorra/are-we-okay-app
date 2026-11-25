@@ -38,12 +38,12 @@ jobs:
             echo "::error::ANDROID_KEYSTORE_BASE64 secret is missing"
             exit 1
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > release-upload.jks
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > release-upload.jks
           cat > keystore.properties <<EOF
           storeFile=../release-upload.jks
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          keyPassword=$ANDROID_KEY_PASSWORD
+          storePassword=$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n')
+          keyAlias=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n')
+          keyPassword=$(printf '%s' "$ANDROID_KEY_PASSWORD" | tr -d '\r\n')
           EOF
 
       - name: Build signed release AAB & APK
