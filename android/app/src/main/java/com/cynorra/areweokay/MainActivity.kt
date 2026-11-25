@@ -28,7 +28,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         dataRepository = DefaultDataRepository(applicationContext)
-        MobileAds.initialize(this) {}
+        MobileAds.initialize(this) {
+            com.cynorra.areweokay.components.AdGate.sdkReady = true
+        }
         handleInvite(intent)
         setUpDailyReminder()
 

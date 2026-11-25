@@ -4,11 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /** Counts sensitive screens (crisis, journal, breathing, consent) currently shown; banner is hidden while > 0. */
 object AdGate {
     var sensitiveScreens by mutableIntStateOf(0)
+    var sdkReady by mutableStateOf(false)
     val adsHidden: Boolean get() = sensitiveScreens > 0
 }
 
