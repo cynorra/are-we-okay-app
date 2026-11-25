@@ -124,6 +124,8 @@ dependencies {
   // Override the old WorkManager version AdMob pulls in transitively (2.7.0),
   // which is missing R8 keep rules that get stripped by shrinking below.
   implementation(libs.androidx.work.runtime)
+  // Upgrade transitive Fragment to >= 1.3.0 required by ActivityResult APIs (lintVitalRelease)
+  implementation("androidx.fragment:fragment-ktx:1.8.6")
 
   // java.time desugaring + QR code for shareable psychologist profile links
   coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
