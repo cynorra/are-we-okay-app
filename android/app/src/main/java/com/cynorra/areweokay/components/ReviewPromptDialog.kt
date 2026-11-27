@@ -24,7 +24,7 @@ private const val KEY_HAS_RATED = "has_rated"
 private const val KEY_NEVER_ASK = "never_ask"
 private const val KEY_PROMPT_COUNT = "prompt_count"
 private const val KEY_LAST_PROMPT_AT = "last_prompt_at"
-private const val MIN_LAUNCHES = 3
+private const val MIN_LAUNCHES = 2
 private const val MAX_PROMPTS = 2
 private const val COOLDOWN_MS = 21L * 24L * 60L * 60L * 1000L
 
