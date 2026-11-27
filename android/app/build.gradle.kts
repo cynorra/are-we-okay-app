@@ -14,8 +14,8 @@ android {
         applicationId = "com.cynorra.areweokay"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     signingConfigs {
@@ -126,6 +126,7 @@ dependencies {
   implementation(libs.androidx.work.runtime)
   // Upgrade transitive Fragment to >= 1.3.0 required by ActivityResult APIs (lintVitalRelease)
   implementation("androidx.fragment:fragment-ktx:1.8.6")
+  implementation("com.google.android.play:review:2.0.2")
 
   // java.time desugaring + QR code for shareable psychologist profile links
   coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")

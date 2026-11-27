@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     CompositionLocalProvider(LocalDataRepository provides dataRepository) {
                         MainNavigation()
+                        com.cynorra.areweokay.components.ReviewPromptDialog(activity = this@MainActivity)
                     }
                 }
             }
